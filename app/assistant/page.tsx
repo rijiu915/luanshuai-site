@@ -319,24 +319,28 @@ export default function AssistantPage() {
             <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">上传中...</p>
           )}
 
-          {/* 模型选择器 - 精简为两个选项 */}
-          <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">AI 模型</label>
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full p-2 bg-input-bg border border-border rounded-md focus:ring-blue-500 focus:border-blue-500 text-foreground"
-            >
-              {MODEL_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value} className="bg-input-bg">
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Pro 版支持更高分辨率与细节
-            </p>
-          </div>
+            {/* 性能增强开关 */}
+            <div className="mt-6 flex items-center justify-between">
+              <div>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">性能增强</span>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  开启后支持更高分辨率与细节
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedModel(selectedModel === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  selectedModel === 'nano-banana-pro' ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    selectedModel === 'nano-banana-pro' ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
 
           {/* 添加比例选择 */}
           <div className="mt-6">

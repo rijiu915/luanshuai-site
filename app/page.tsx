@@ -194,7 +194,13 @@ const [showDropdown, setShowDropdown] = useState(false);
       window.location.reload();
     };
 
-    const currentPoints = model === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60);
+    const getPoints = () => {
+      let cost = model === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60);
+      if (level === 'VIP') return Math.max(0, cost - 3);
+      if (level === 'SVIP') return Math.max(0, cost - 5);
+      return cost;
+    };
+    const currentPoints = getPoints();
 
       return (
         <div className="min-h-screen bg-background text-foreground">
@@ -298,20 +304,28 @@ const [showDropdown, setShowDropdown] = useState(false);
               </div>
             </div>
 
-              {/* 底部：左模型选择，右生成按钮 */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border">
-                {/* 模型选择 */}
-                <div className="w-full sm:w-auto">
-                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">模型</label>
-                  <select
-                    value={model}
-                    onChange={(e) => setModel(e.target.value as 'nano-banana' | 'nano-banana-pro')}
-                    className="bg-input-bg border border-border rounded px-3 py-2 w-full sm:w-48 text-foreground"
-                  >
-                    <option value="nano-banana" className="bg-input-bg">nano banana</option>
-                    <option value="nano-banana-pro" className="bg-input-bg">nano banana pro</option>
-                  </select>
-                </div>
+                {/* 底部：左性能增强开关，右生成按钮 */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border">
+                  {/* 性能增强开关 */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">性能增强</span>
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400">开启后效果更佳</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setModel(model === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                        model === 'nano-banana-pro' ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          model === 'nano-banana-pro' ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
 
                 <div className="flex flex-col items-end gap-2">
                   <span className="text-sm text-gray-500 dark:text-gray-400">
