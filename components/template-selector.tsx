@@ -15,52 +15,59 @@ export interface Template {
 export const TEMPLATES: Template[] = [
   {
     id: '1',
-    name: '极简主义别墅',
-    category: '住宅',
-    prompt: '极简主义现代别墅，大落地窗，清水混凝土墙面，周围是森林，黄昏光影，超写实，8k',
-    image: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&q=80&w=400&h=300'
+    name: '平面图转3D',
+    category: '建筑',
+    prompt: 'Render this architectural plan as photorealistic 3D model, Nano Banana style, high detail materials, natural daylight, sharp edges',
+    image: 'https://images.unsplash.com/photo-1503387762-592dee58c460?auto=format&fit=crop&q=80&w=400&h=300'
   },
   {
     id: '2',
-    name: '日式和风庭院',
-    category: '景观',
-    prompt: '日式传统和风庭院，枯山水，竹林，纸拉门建筑，宁静氛围，电影感，高动态范围',
-    image: 'https://images.unsplash.com/photo-1545579133-99bb5ab189bd?auto=format&fit=crop&q=80&w=400&h=300'
+    name: '立面图生成',
+    category: '效果',
+    prompt: 'Convert building facade image to photorealistic render, precise architectural details, modern glass and steel materials, blue hour lighting',
+    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=400&h=300'
   },
   {
     id: '3',
-    name: '赛博朋克城市',
-    category: '概念',
-    prompt: '未来赛博朋克风格城市，霓虹灯，雨夜，高耸的摩天大楼，飞行汽车，丰富细节，史诗级画质',
-    image: 'https://images.unsplash.com/photo-1605142859862-978be7eba909?auto=format&fit=crop&q=80&w=400&h=300'
+    name: '草图转渲染',
+    category: '创意',
+    prompt: 'Transform architectural sketch into photorealistic render, residential style, dramatic lighting, rich vegetation, cinematic atmosphere',
+    image: 'https://images.unsplash.com/photo-1600585154340-be6191da95b8?auto=format&fit=crop&q=80&w=400&h=300'
   },
   {
     id: '4',
-    name: '工业风LOFT',
+    name: '室内空间',
     category: '室内',
-    prompt: '工业风格LOFT办公室，红砖墙，外露管道，黑色金属框架，大采光窗口，现代家具，工作氛围',
-    image: 'https://images.unsplash.com/photo-1515542706656-8e6ef17a1ed2?auto=format&fit=crop&q=80&w=400&h=300'
+    prompt: 'Dramatic interior visualization of a modern living room, warm ambient lighting, high-end materials, floor-to-ceiling windows, 8k resolution',
+    image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&q=80&w=400&h=300'
   },
   {
     id: '5',
-    name: '欧式古典城堡',
-    category: '历史',
-    prompt: '宏伟的欧式古典城堡，坐落在湖边山顶，哥特式建筑细节，晨雾缭绕，震撼全景，唯美梦幻',
-    image: 'https://images.unsplash.com/photo-1533154683836-84ea7a0bc310?auto=format&fit=crop&q=80&w=400&h=300'
+    name: '城市规划',
+    category: '规划',
+    prompt: 'Urban masterplan visualization, sustainable mixed-use development, aerial view, green spaces, photorealistic textures, daytime',
+    image: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&q=80&w=400&h=300'
   },
   {
     id: '6',
-    name: '北欧森林木屋',
-    category: '度假',
-    prompt: '舒适的北欧风格木屋，在雪后的森林中，温暖的灯光从窗户透出，宁静冬夜，温馨治愈',
-    image: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&q=80&w=400&h=300'
+    name: '概念未来',
+    category: '概念',
+    prompt: 'Futuristic organic skyscraper, fluid forms, bio-integrated architecture, sunset lighting, cinematic render, sharp details',
+    image: 'https://images.unsplash.com/photo-1545558014-8692077e9b5c?auto=format&fit=crop&q=80&w=400&h=300'
   },
   {
     id: '7',
-    name: '现代写字楼',
-    category: '商业',
-    prompt: '现代全玻璃幕墙写字楼，位于繁华商业区，阳光反射，蓝天白云背景，商务感，极简线条',
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=400&h=300'
+    name: '旧房翻新',
+    category: '改造',
+    prompt: 'Adaptive reuse of an old industrial warehouse into a modern creative office, preserving brick walls, high ceilings, sustainable makeover',
+    image: 'https://images.unsplash.com/photo-1515542706656-8e6ef17a1ed2?auto=format&fit=crop&q=80&w=400&h=300'
+  },
+  {
+    id: '8',
+    name: '景观园林',
+    category: '景观',
+    prompt: 'Public urban park with a modern bridge, recreational areas, pedestrians, golden hour, photorealistic landscape design',
+    image: 'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?auto=format&fit=crop&q=80&w=400&h=300'
   }
 ];
 
