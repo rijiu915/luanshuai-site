@@ -202,13 +202,19 @@ const fetchBalance = useCallback(async () => {
       window.location.reload();
     };
 
-    const getPoints = () => {
-      let cost = model === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60);
-      if (vipLevel === 'VIP') return Math.max(0, cost - 3);
-      if (vipLevel === 'SVIP') return Math.max(0, cost - 5);
-      return cost;
+    const getPointsInfo = () => {
+      const baseCost = model === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60);
+      let discount = 0;
+      if (vipLevel === 'VIP') discount = 3;
+      else if (vipLevel === 'SVIP') discount = 5;
+      
+      return {
+        baseCost,
+        discount,
+        finalCost: Math.max(0, baseCost - discount)
+      };
     };
-    const currentPoints = getPoints();
+    const { baseCost, discount, finalCost } = getPointsInfo();
 
       return (
         <div className="min-h-screen bg-background text-foreground">
@@ -348,10 +354,20 @@ const fetchBalance = useCallback(async () => {
                 </div>
               </Link>
 
-                <div className="flex flex-col items-end gap-2">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    本次生成所需积分: <span className="text-orange-400 font-bold">{currentPoints}</span>
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-gray-400">标准: <span className={discount > 0 ? "line-through" : ""}>{baseCost}</span> 积分</span>
+                      {discount > 0 ? (
+                        <span className="text-green-500 font-medium">{vipLevel} 减免: -{discount}</span>
+                      ) : (
+                        <Link href="/vip" className="text-blue-500 hover:underline">开通会员最高减免 5 积分</Link>
+                      )}
+                    </div>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      本次生成实付积分: <span className="text-orange-400 font-bold text-lg">{finalCost}</span>
+                    </span>
+                  </div>
+
                   <button
                     onClick={handleGenerate}
                     disabled={pageStatus === 'submitting' || pageStatus === 'polling'}
