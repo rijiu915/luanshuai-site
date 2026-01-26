@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { Navbar } from '@/components/navbar';
-import { TemplateSelector } from '@/components/template-selector';
 
 export default function HomePage() {
   const { data: session } = useSession();
@@ -187,15 +186,7 @@ export default function HomePage() {
     }
   };
 
-  const getPointsInfo = () => {
-    const baseCost = model === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60);
-    let discount = 0;
-    if (vipLevel === 'VIP') discount = 3;
-    else if (vipLevel === 'SVIP') discount = 5;
-    return { baseCost, discount, finalCost: Math.max(0, baseCost - discount) };
-  };
-
-  const { baseCost, discount, finalCost } = getPointsInfo();
+  const pointsNeeded = model === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -209,8 +200,6 @@ export default function HomePage() {
           <p className="text-gray-500 dark:text-gray-400 text-center mb-10 max-w-2xl mx-auto">
             支持文生图 & 图生图（上传参考图）
           </p>
-
-          <TemplateSelector onSelect={(template) => setPrompt(template.prompt)} />
 
           <div className="relative min-h-[500px] border border-border rounded-xl bg-card-bg p-6">
             {/* Prompt */}
@@ -331,20 +320,8 @@ export default function HomePage() {
                 </div>
               </Link>
 
-              {/* 积分详情 */}
-              <div className="flex flex-col items-end gap-1">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-gray-400">标准: <span className={discount > 0 ? "line-through" : ""}>{baseCost}</span> 积分</span>
-                  {discount > 0 ? (
-                    <span className="text-green-500 font-medium">{vipLevel} 减免: -{discount}</span>
-                  ) : (
-                    <Link href="/vip" className="text-blue-500 hover:underline">开通会员最高减免 5 积分</Link>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">本次生成实付积分:</span>
-                  <span className="text-orange-400 font-bold text-lg">{finalCost}</span>
-                </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                本次生成将扣除 <span className="text-orange-400 font-bold">{pointsNeeded}</span> 积分
               </div>
 
               <button
