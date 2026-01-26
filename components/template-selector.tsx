@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Sparkles } from 'lucide-react';
 
 export interface Template {
   id: string;
@@ -161,6 +161,7 @@ interface TemplateSelectorProps {
 
 export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [selectedForPreview, setSelectedForPreview] = useState<Template | null>(null);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -173,6 +174,13 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
         left: scrollTo,
         behavior: 'smooth'
       });
+    }
+  };
+
+  const handleApply = () => {
+    if (selectedForPreview) {
+      onSelect(selectedForPreview);
+      setSelectedForPreview(null);
     }
   };
 
@@ -209,7 +217,7 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
           {TEMPLATES.map((template) => (
             <div
               key={template.id}
-              onClick={() => onSelect(template)}
+              onClick={() => setSelectedForPreview(template)}
               className="flex-shrink-0 w-40 md:w-48 group cursor-pointer snap-start"
             >
               <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-2 border border-border group-hover:border-blue-500 transition-colors">
@@ -234,6 +242,62 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
           ))}
         </div>
       </div>
+
+      {/* Preview Modal */}
+      {selectedForPreview && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div 
+            className="bg-background border border-border rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative aspect-video">
+              <Image
+                src={selectedForPreview.image}
+                alt={selectedForPreview.name}
+                fill
+                className="object-cover"
+                unoptimized
+              />
+              <button 
+                onClick={() => setSelectedForPreview(null)}
+                className="absolute top-4 right-4 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-md transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="absolute bottom-4 left-4">
+                <span className="px-2 py-1 bg-blue-600 text-[10px] font-bold text-white rounded uppercase tracking-wider">
+                  {selectedForPreview.category}
+                </span>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-5 h-5 text-blue-500" />
+                <h3 className="text-xl font-bold text-foreground">{selectedForPreview.name}</h3>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
+                {selectedForPreview.prompt}
+              </p>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setSelectedForPreview(null)}
+                  className="flex-1 px-4 py-2.5 border border-border rounded-xl font-medium hover:bg-accent transition-colors"
+                >
+                  关闭
+                </button>
+                <button
+                  onClick={handleApply}
+                  className="flex-[2] px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors shadow-lg shadow-blue-500/20"
+                >
+                  立即应用
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .no-scrollbar::-webkit-scrollbar {
