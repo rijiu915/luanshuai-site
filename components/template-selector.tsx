@@ -210,10 +210,11 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
           <ChevronRight className="w-6 h-6 text-foreground" />
         </button>
 
-        <div 
-          ref={scrollRef}
-          className="flex overflow-x-auto gap-4 pb-4 no-scrollbar scroll-smooth snap-x"
-        >
+          <div 
+            ref={scrollRef}
+            className="flex overflow-x-auto gap-4 pb-4 scroll-smooth snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          >
+
           {TEMPLATES.map((template) => (
             <div
               key={template.id}
@@ -299,15 +300,6 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
         </div>
       )}
 
-      <style jsx>{`
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
-    </div>
-  );
-}
+      </div>
+    );
+  }

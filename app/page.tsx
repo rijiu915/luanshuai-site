@@ -1,21 +1,18 @@
-// app/page.tsx
 'use client';
 
-import { useState, useRef, useEffect,useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { Navbar } from '@/components/navbar';
-import { TemplateSelector, Template } from '@/components/template-selector';
+import { TemplateSelector } from '@/components/template-selector';
 
 export default function HomePage() {
-
-
   const { data: session } = useSession();
   const [balance, setBalance] = useState<number | null>(null);
   const [vipLevel, setVipLevel] = useState<string>('FREE');
 
-const fetchBalance = useCallback(async () => {
+  const fetchBalance = useCallback(async () => {
     try {
       const res = await fetch('/api/user/balance');
       const data = await res.json();
@@ -44,7 +41,6 @@ const fetchBalance = useCallback(async () => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [pageStatus, setPageStatus] = useState<'idle' | 'submitting' | 'polling' | 'success' | 'error'>('idle');
 
-  // ========== 文件处理（不变）==========
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (uploadedFiles.length + files.length > 8) {
@@ -78,9 +74,7 @@ const fetchBalance = useCallback(async () => {
     fileInputRef.current?.click();
   };
 
-  // ========== 上传图片（不变）==========
   const uploadImages = async (files: File[]): Promise<string[]> => {
-    const urls: string[] = [];
     const uploadPromises = files.map(async (file) => {
       const formData = new FormData();
       formData.append('image', file);
@@ -98,7 +92,6 @@ const fetchBalance = useCallback(async () => {
     }
   };
 
-  // ========== 轮询（不变）==========
   const pollTaskStatus = (taskId: string) => {
     let pollCount = 0;
     const MAX_POLL = 30;
@@ -135,7 +128,6 @@ const fetchBalance = useCallback(async () => {
     }, 2000);
   };
 
-  // ========== 生成逻辑（关键修改）==========
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       alert('请输入提示词');
@@ -162,13 +154,12 @@ const fetchBalance = useCallback(async () => {
         prompt: prompt.trim(),
         numImages: 1,
         type,
-        aspectRatio: aspectRatio,
+        aspectRatio,
         imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
         model,
         callBackUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/api/callback`,
       };
 
-      // ✅ 只有在选择 'nano-banana-pro' 时才添加 resolution 字段
       if (model === 'nano-banana-pro') {
         requestBody.resolution = resolution;
       }
@@ -184,7 +175,7 @@ const fetchBalance = useCallback(async () => {
       if (res.ok && data.code === 200 && data.data?.taskId) {
         setPageStatus('polling');
         pollTaskStatus(data.data.taskId);
-        fetchBalance(); // 刷新余额
+        fetchBalance();
       } else {
         setPageStatus('error');
         alert(data.msg || '提交失败');
@@ -196,86 +187,72 @@ const fetchBalance = useCallback(async () => {
     }
   };
 
-    const handleLogout = async () => {
-      await signOut({ redirect: false });
-      setShowDropdown(false);
-      window.location.reload();
-    };
+  const getPointsInfo = () => {
+    const baseCost = model === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60);
+    let discount = 0;
+    if (vipLevel === 'VIP') discount = 3;
+    else if (vipLevel === 'SVIP') discount = 5;
+    return { baseCost, discount, finalCost: Math.max(0, baseCost - discount) };
+  };
 
-    const getPointsInfo = () => {
-      const baseCost = model === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60);
-      let discount = 0;
-      if (vipLevel === 'VIP') discount = 3;
-      else if (vipLevel === 'SVIP') discount = 5;
-      
-      return {
-        baseCost,
-        discount,
-        finalCost: Math.max(0, baseCost - discount)
-      };
-    };
-    const { baseCost, discount, finalCost } = getPointsInfo();
+  const { baseCost, discount, finalCost } = getPointsInfo();
 
-      return (
-        <div className="min-h-screen bg-background text-foreground">
-          <Navbar />
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <Navbar />
 
-          <main className="container mx-auto px-4 py-12 md:py-20">
-
+      <main className="container mx-auto px-4 py-12 md:py-20">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl md:text-5xl font-bold text-center mb-6">
             用文字描述，生成建筑概念图
           </h1>
-            <p className="text-gray-500 dark:text-gray-400 text-center mb-10 max-w-2xl mx-auto">
-              支持文生图 & 图生图（上传参考图）
-            </p>
+          <p className="text-gray-500 dark:text-gray-400 text-center mb-10 max-w-2xl mx-auto">
+            支持文生图 & 图生图（上传参考图）
+          </p>
 
-            <TemplateSelector onSelect={(template) => setPrompt(template.prompt)} />
+          <TemplateSelector onSelect={(template) => setPrompt(template.prompt)} />
 
-              <div className="relative min-h-[500px] border border-border rounded-xl bg-card-bg p-6">
+          <div className="relative min-h-[500px] border border-border rounded-xl bg-card-bg p-6">
+            {/* Prompt */}
+            <div className="mb-6">
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="例如：山地上的极简 wood house..."
+                className="w-full h-24 p-4 bg-input-bg border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-foreground placeholder-gray-500"
+              />
+            </div>
 
-              {/* Prompt */}
-              <div className="mb-6">
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="例如：山地上的极简木屋..."
-                  className="w-full h-24 p-4 bg-input-bg border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-foreground placeholder-gray-500"
-                />
+            {/* 比例 & 分辨率 */}
+            <div className="flex flex-wrap gap-4 mb-6">
+              <div>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">比例</label>
+                <select
+                  value={aspectRatio}
+                  onChange={(e) => setAspectRatio(e.target.value)}
+                  className="bg-input-bg border border-border rounded px-3 py-2 text-foreground"
+                >
+                  {['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'].map((r) => (
+                    <option key={r} value={r} className="bg-input-bg">{r}</option>
+                  ))}
+                </select>
               </div>
-  
-              {/* 比例 & 分辨率 */}
-              <div className="flex flex-wrap gap-4 mb-6">
-                {/* 比例 */}
+
+              {model === 'nano-banana-pro' && (
                 <div>
-                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">比例</label>
+                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">分辨率</label>
                   <select
-                    value={aspectRatio}
-                    onChange={(e) => setAspectRatio(e.target.value)}
+                    value={resolution}
+                    onChange={(e) => setResolution(e.target.value as '1K' | '2K' | '4K')}
                     className="bg-input-bg border border-border rounded px-3 py-2 text-foreground"
                   >
-                    {['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'].map((r) => (
-                      <option key={r} value={r} className="bg-input-bg">{r}</option>
-                    ))}
+                    <option value="1K" className="bg-input-bg">1K</option>
+                    <option value="2K" className="bg-input-bg">2K</option>
+                    <option value="4K" className="bg-input-bg">4K</option>
                   </select>
                 </div>
-  
-                {/* 分辨率：仅在选择 'nano-banana-pro' 时显示 */}
-                {model === 'nano-banana-pro' && (
-                  <div>
-                    <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">分辨率</label>
-                    <select
-                      value={resolution}
-                      onChange={(e) => setResolution(e.target.value as '1K' | '2K' | '4K')}
-                      className="bg-input-bg border border-border rounded px-3 py-2 text-foreground"
-                    >
-                      <option value="1K" className="bg-input-bg">1K</option>
-                      <option value="2K" className="bg-input-bg">2K</option>
-                      <option value="4K" className="bg-input-bg">4K</option>
-                    </select>
-                  </div>
-                )}
-              </div>
+              )}
+            </div>
 
             {/* 图片上传 */}
             <div className="mb-6">
@@ -318,8 +295,8 @@ const fetchBalance = useCallback(async () => {
               </div>
             </div>
 
-                {/* 底部：左性能增强开关，右生成按钮 */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border">
+            {/* 底部功能区 */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border">
               {/* 性能增强开关 */}
               <div className="flex items-center gap-3">
                 <div className="flex flex-col">
@@ -354,59 +331,59 @@ const fetchBalance = useCallback(async () => {
                 </div>
               </Link>
 
-                  <div className="flex flex-col items-end gap-1">
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="text-gray-400">标准: <span className={discount > 0 ? "line-through" : ""}>{baseCost}</span> 积分</span>
-                      {discount > 0 ? (
-                        <span className="text-green-500 font-medium">{vipLevel} 减免: -{discount}</span>
-                      ) : (
-                        <Link href="/vip" className="text-blue-500 hover:underline">开通会员最高减免 5 积分</Link>
-                      )}
-                    </div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      本次生成实付积分: <span className="text-orange-400 font-bold text-lg">{finalCost}</span>
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={handleGenerate}
-                    disabled={pageStatus === 'submitting' || pageStatus === 'polling'}
-                    className={`px-6 py-2 rounded-lg font-medium whitespace-nowrap text-white ${
-                      pageStatus === 'submitting' || pageStatus === 'polling'
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 hover:bg-blue-700'
-                    }`}
-                  >
-                    {pageStatus === 'submitting'
-                      ? '提交中...'
-                      : pageStatus === 'polling'
-                      ? '生成中...'
-                      : '生成图像'}
-                  </button>
+              {/* 积分详情 */}
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-gray-400">标准: <span className={discount > 0 ? "line-through" : ""}>{baseCost}</span> 积分</span>
+                  {discount > 0 ? (
+                    <span className="text-green-500 font-medium">{vipLevel} 减免: -{discount}</span>
+                  ) : (
+                    <Link href="/vip" className="text-blue-500 hover:underline">开通会员最高减免 5 积分</Link>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">本次生成实付积分:</span>
+                  <span className="text-orange-400 font-bold text-lg">{finalCost}</span>
                 </div>
               </div>
 
-
-              {/* 预览 */}
-              <div className="mt-8 flex justify-center">
-                {pageStatus === 'success' && imageUrl ? (
-                  <Image
-                    src={imageUrl}
-                    alt="Generated"
-                    width={800}
-                    height={800}
-                    className="rounded-lg shadow-lg max-w-full"
-                    unoptimized
-                  />
-                ) : pageStatus === 'polling' ? (
-                  <div className="text-center py-10">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
-                    <p className="text-foreground">正在生成...</p>
-                  </div>
-                ) : (
-                  <div className="text-gray-400 py-10">点击"生成图像"开始创作</div>
-                )}
+              <button
+                onClick={handleGenerate}
+                disabled={pageStatus === 'submitting' || pageStatus === 'polling'}
+                className={`px-6 py-2 rounded-lg font-medium whitespace-nowrap text-white ${
+                  pageStatus === 'submitting' || pageStatus === 'polling'
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {pageStatus === 'submitting'
+                  ? '提交中...'
+                  : pageStatus === 'polling'
+                  ? '生成中...'
+                  : '生成图像'}
+              </button>
             </div>
+          </div>
+
+          {/* 预览区 */}
+          <div className="mt-8 flex justify-center">
+            {pageStatus === 'success' && imageUrl ? (
+              <Image
+                src={imageUrl}
+                alt="Generated"
+                width={800}
+                height={800}
+                className="rounded-lg shadow-lg max-w-full"
+                unoptimized
+              />
+            ) : pageStatus === 'polling' ? (
+              <div className="text-center py-10">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
+                <p className="text-foreground">正在生成...</p>
+              </div>
+            ) : (
+              <div className="text-gray-400 py-10">点击"生成图像"开始创作</div>
+            )}
           </div>
         </div>
       </main>
