@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { Navbar } from '@/components/navbar';
+import { TemplateSelector, Template } from '@/components/template-selector';
 
 export default function HomePage() {
 
@@ -205,11 +206,14 @@ const [showDropdown, setShowDropdown] = useState(false);
           <h1 className="text-3xl md:text-5xl font-bold text-center mb-6">
             用文字描述，生成建筑概念图
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-center mb-10 max-w-2xl mx-auto">
-            支持文生图 & 图生图（上传参考图）
-          </p>
+            <p className="text-gray-500 dark:text-gray-400 text-center mb-10 max-w-2xl mx-auto">
+              支持文生图 & 图生图（上传参考图）
+            </p>
 
-            <div className="relative min-h-[500px] border border-border rounded-xl bg-card-bg p-6">
+            <TemplateSelector onSelect={(template) => setPrompt(template.prompt)} />
+
+              <div className="relative min-h-[500px] border border-border rounded-xl bg-card-bg p-6">
+
               {/* Prompt */}
               <div className="mb-6">
                 <textarea
