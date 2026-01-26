@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { Navbar } from '@/components/navbar';
-import { Sparkles, Image as ImageIcon, Layout, Settings, History, Info, Crown, ChevronRight } from 'lucide-react';
+import { Sparkles, Image as ImageIcon, Layout, Settings, History, Info, Crown, ChevronRight, X, Plus } from 'lucide-react';
 
 const FEATURES = [
   '渲染风格分析', '总图填色渲染', '建筑材料分析', '总平面图', '立面图生成鸟瞰图', 
@@ -205,51 +205,106 @@ export default function HomePage() {
   const { baseCost, discount, finalCost } = getPointsInfo();
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] font-sans selection:bg-blue-500/30">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-8 md:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <main className="container mx-auto px-4 py-6 md:py-8 flex-1">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
-          {/* 左侧边栏 - 功能快捷入口 */}
-          <aside className="lg:col-span-3 space-y-6 hidden lg:block">
-            <div className="bg-[#141414] border border-[#262626] rounded-2xl p-5 shadow-xl">
-              <h3 className="text-sm font-semibold text-[#888] uppercase tracking-wider mb-4 flex items-center gap-2">
+          {/* 左侧边栏：设置与功能 */}
+          <aside className="lg:col-span-1 space-y-6">
+            <div className="bg-card-bg border border-border rounded-xl p-5 shadow-sm">
+              <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
+                <Settings className="w-4 h-4" /> 生成设置
+              </h3>
+              
+              <div className="space-y-4">
+                {/* 性能增强开关 */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-medium">性能增强 (Pro)</span>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">支持 2K/4K 分辨率</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModel(model === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                      model === 'nano-banana-pro' ? 'bg-blue-600' : 'bg-muted'
+                    }`}
+                  >
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      model === 'nano-banana-pro' ? 'translate-x-5' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* 比例选择 */}
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">画面比例</label>
+                  <select
+                    value={aspectRatio}
+                    onChange={(e) => setAspectRatio(e.target.value)}
+                    className="w-full bg-input-bg border border-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none"
+                  >
+                    {['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'].map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 分辨率选择 */}
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">分辨率</label>
+                  <select
+                    value={resolution}
+                    disabled={model !== 'nano-banana-pro'}
+                    onChange={(e) => setResolution(e.target.value as '1K' | '2K' | '4K')}
+                    className="w-full bg-input-bg border border-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none disabled:opacity-50"
+                  >
+                    <option value="1K">1K (标准)</option>
+                    <option value="2K">2K (高清)</option>
+                    <option value="4K">4K (极清)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* 功能快捷入口 */}
+            <div className="bg-card-bg border border-border rounded-xl p-5 shadow-sm">
+              <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
                 <Layout className="w-4 h-4" /> 架构功能
               </h3>
-              <div className="space-y-1 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="flex flex-wrap gap-2">
                 {FEATURES.map((feature, idx) => (
                   <button
                     key={idx}
                     onClick={() => setPrompt(prev => prev + (prev ? ' ' : '') + feature)}
-                    className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-[#262626] transition-colors text-[#a1a1a1] hover:text-white flex items-center justify-between group"
+                    className="px-2 py-1 text-[11px] bg-muted border border-border rounded hover:bg-blue-500/10 hover:border-blue-500/30 hover:text-blue-600 transition-colors"
                   >
-                    <span>{feature}</span>
-                    <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {feature}
                   </button>
                 ))}
               </div>
             </div>
 
-            <Link href="/vip" className="block p-5 rounded-2xl bg-gradient-to-br from-[#f59e0b20] to-[#ea580c20] border border-[#f59e0b30] hover:border-[#f59e0b50] transition-all group">
-              <div className="flex items-center gap-3 mb-2 text-yellow-500">
-                <Crown className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                <span className="font-bold">开通会员</span>
+            {/* 会员提示 */}
+            <Link href="/vip" className="block p-4 rounded-xl bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border border-yellow-500/20 hover:border-yellow-500/40 transition-all">
+              <div className="flex items-center gap-2 mb-1 text-yellow-600 dark:text-yellow-500">
+                <Crown className="w-4 h-4" />
+                <span className="text-xs font-bold">VIP 权益</span>
               </div>
-              <p className="text-xs text-[#a1a1a1] leading-relaxed">
-                每次生图最高可减免 <span className="text-yellow-500 font-bold">5 积分</span>，尊享极速通道与更高分辨率。
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                VIP/SVIP 每次生图最高可减免 <span className="text-orange-500 font-bold">5 积分</span>。
               </p>
             </Link>
           </aside>
 
-          {/* 中间主生成区 */}
-          <div className="lg:col-span-6 space-y-6">
-            <div className="bg-[#141414] border border-[#262626] rounded-2xl p-6 shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-orange-600 opacity-50"></div>
-              
-              <div className="flex items-center gap-2 mb-6 text-blue-400">
+          {/* 中间主要区域 */}
+          <div className="lg:col-span-3 space-y-6">
+            <div className="bg-card-bg border border-border rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-4 text-blue-600 dark:text-blue-400">
                 <Sparkles className="w-5 h-5" />
-                <h2 className="font-bold text-lg">AI 建筑生成助手</h2>
+                <h2 className="font-bold">AI 建筑生成助手</h2>
               </div>
 
               {/* Prompt Input */}
@@ -257,49 +312,48 @@ export default function HomePage() {
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="输入描述词，例如：在森林里的极简主义玻璃住宅，晨雾效果，写实渲染..."
-                  className="w-full h-32 p-4 bg-[#0a0a0a] border border-[#262626] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-[#ededed] placeholder-[#555] resize-none transition-all"
+                  placeholder="请输入描述词，或从左侧选择功能..."
+                  className="w-full h-32 p-4 bg-input-bg border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm resize-none"
                 />
-                <button 
-                  onClick={() => setPrompt('')}
-                  className="absolute bottom-4 right-4 text-xs text-[#555] hover:text-[#888] transition-colors"
-                >
-                  清空
-                </button>
+                {prompt && (
+                  <button 
+                    onClick={() => setPrompt('')}
+                    className="absolute bottom-3 right-3 p-1 rounded-md bg-muted hover:bg-muted-foreground/10 text-muted-foreground transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
               {/* Reference Images */}
               <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-medium text-[#888] flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4" /> 参考图片 (最多8张)
-                  </label>
-                  <span className="text-[10px] text-[#555]">每张 ≤ 5MB</span>
-                </div>
+                <label className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4" /> 参考图片 ({uploadedFiles.length}/8)
+                </label>
                 <div className="flex flex-wrap gap-3">
                   {uploadedFiles.map((file, index) => (
-                    <div key={index} className="relative w-20 h-20 group">
+                    <div key={index} className="relative w-16 h-16 group">
                       <Image
                         src={URL.createObjectURL(file)}
                         alt={`preview-${index}`}
                         fill
-                        className="object-cover rounded-xl border border-[#262626]"
+                        className="object-cover rounded-lg border border-border"
                         unoptimized
                       />
                       <button
                         onClick={() => removeFile(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        ×
+                        <X className="w-3 h-3" />
                       </button>
                     </div>
                   ))}
                   {uploadedFiles.length < 8 && (
                     <button
                       onClick={triggerFileSelect}
-                      className="w-20 h-20 border-2 border-dashed border-[#262626] rounded-xl flex items-center justify-center text-[#555] hover:border-blue-500/50 hover:text-blue-400 transition-all bg-[#0a0a0a]"
+                      className="w-16 h-16 border-2 border-dashed border-border rounded-lg flex items-center justify-center text-muted-foreground hover:border-blue-500 hover:text-blue-500 transition-all bg-muted/50"
                     >
-                      <span className="text-2xl font-light">+</span>
+                      <Plus className="w-5 h-5" />
                     </button>
                   )}
                   <input
@@ -313,191 +367,81 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Settings Grid */}
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[#888] uppercase tracking-widest">画面比例</label>
-                  <select
-                    value={aspectRatio}
-                    onChange={(e) => setAspectRatio(e.target.value)}
-                    className="w-full bg-[#0a0a0a] border border-[#262626] rounded-xl px-4 py-2.5 text-sm text-[#ededed] focus:ring-1 focus:ring-blue-500/50 outline-none cursor-pointer hover:bg-[#1a1a1a] transition-colors"
-                  >
-                    {['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'].map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[#888] uppercase tracking-widest">分辨率</label>
-                  <select
-                    value={resolution}
-                    disabled={model !== 'nano-banana-pro'}
-                    onChange={(e) => setResolution(e.target.value as '1K' | '2K' | '4K')}
-                    className="w-full bg-[#0a0a0a] border border-[#262626] rounded-xl px-4 py-2.5 text-sm text-[#ededed] focus:ring-1 focus:ring-blue-500/50 outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#1a1a1a] transition-colors"
-                  >
-                    <option value="1K">1K (标准)</option>
-                    <option value="2K">2K (高清)</option>
-                    <option value="4K">4K (极清)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Bottom Control Bar */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-[#262626]">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-[#888]">性能增强</span>
-                    <button
-                      type="button"
-                      onClick={() => setModel(model === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
-                        model === 'nano-banana-pro' ? 'bg-blue-600' : 'bg-[#262626]'
-                      }`}
-                    >
-                      <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                        model === 'nano-banana-pro' ? 'translate-x-5' : 'translate-x-1'
-                      }`} />
-                    </button>
+              {/* Bottom Control */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-border">
+                <div className="flex items-center gap-2">
+                  <div className="text-sm font-bold text-orange-500">
+                    {finalCost} <span className="text-xs font-normal text-muted-foreground">积分</span>
                   </div>
+                  {discount > 0 && (
+                    <span className="text-[10px] text-muted-foreground line-through">原价 {baseCost}</span>
+                  )}
+                  {discount > 0 && (
+                    <span className="text-[10px] text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 px-1 rounded">
+                      {vipLevel} 减免
+                    </span>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-4 w-full sm:w-auto">
-                  <div className="text-right flex flex-col items-end">
-                    <div className="flex items-center gap-1.5">
-                      {discount > 0 && (
-                        <span className="text-[10px] text-yellow-500 font-bold px-1.5 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20">
-                          {vipLevel} 减免 -{discount}
-                        </span>
-                      )}
-                      <span className="text-sm font-bold text-orange-500">
-                        {finalCost} <span className="text-[10px] font-normal text-[#888]">积分</span>
-                      </span>
-                    </div>
-                    {discount > 0 && (
-                      <span className="text-[10px] text-[#555] line-through">原价 {baseCost}</span>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={handleGenerate}
-                    disabled={pageStatus === 'submitting' || pageStatus === 'polling'}
-                    className={`flex-1 sm:flex-none px-8 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-all shadow-xl shadow-blue-900/20 ${
-                      pageStatus === 'submitting' || pageStatus === 'polling'
-                        ? 'bg-[#262626] text-[#555] cursor-not-allowed'
-                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white active:scale-95'
-                    }`}
-                  >
-                    {pageStatus === 'submitting' ? '提交中...' : pageStatus === 'polling' ? '生成中...' : '立即生成'}
-                  </button>
-                </div>
+                <button
+                  onClick={handleGenerate}
+                  disabled={pageStatus === 'submitting' || pageStatus === 'polling'}
+                  className={`w-full sm:w-auto px-10 py-2.5 rounded-lg font-bold text-sm transition-all ${
+                    pageStatus === 'submitting' || pageStatus === 'polling'
+                      ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md'
+                  }`}
+                >
+                  {pageStatus === 'submitting' ? '提交中...' : pageStatus === 'polling' ? '生成中...' : '立即生成'}
+                </button>
               </div>
             </div>
 
-            {/* Success Area */}
+            {/* Results Area */}
             {imageUrl && pageStatus === 'success' && (
-              <div className="bg-[#141414] border border-[#262626] rounded-2xl p-4 shadow-2xl animate-in fade-in zoom-in duration-500">
-                <div className="relative aspect-video w-full overflow-hidden rounded-xl">
+              <div className="bg-card-bg border border-border rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted flex items-center justify-center">
                   <Image
                     src={imageUrl}
-                    alt="Generated"
+                    alt="Generated Result"
                     fill
                     className="object-contain"
                     unoptimized
                   />
                 </div>
-                <div className="flex justify-between items-center mt-4 px-2">
-                  <span className="text-xs text-[#888]">生成完成 - 点击右键可保存图片</span>
+                <div className="flex justify-between items-center mt-3 px-1">
+                  <span className="text-[10px] text-muted-foreground">生成完成，右键可保存</span>
                   <button 
                     onClick={() => window.open(imageUrl, '_blank')}
-                    className="text-xs text-blue-400 hover:underline"
+                    className="text-[10px] text-blue-500 hover:underline"
                   >
                     查看高清原图
                   </button>
                 </div>
               </div>
             )}
-          </div>
 
-          {/* 右侧边栏 - 用户状态 & 说明 */}
-          <aside className="lg:col-span-3 space-y-6">
-            <div className="bg-[#141414] border border-[#262626] rounded-2xl p-5 shadow-xl">
-              <h3 className="text-sm font-semibold text-[#888] uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Info className="w-4 h-4" /> 积分规则
-              </h3>
-              <ul className="space-y-4 text-xs text-[#a1a1a1]">
-                <li className="flex justify-between items-start gap-4">
-                  <span>标准版 (Nano Banana)</span>
-                  <span className="text-white font-mono">15 积分/张</span>
-                </li>
-                <li className="flex justify-between items-start gap-4">
-                  <span>专业版 (Nano Pro 2K)</span>
-                  <span className="text-white font-mono">60 积分/张</span>
-                </li>
-                <li className="flex justify-between items-start gap-4">
-                  <span>专业版 (Nano Pro 4K)</span>
-                  <span className="text-white font-mono">90 积分/张</span>
-                </li>
-                <li className="pt-2 border-t border-[#262626] text-[10px] text-[#555]">
-                  提示：生成失败会自动退还积分。
-                </li>
-              </ul>
-            </div>
-
-            <div className="bg-[#141414] border border-[#262626] rounded-2xl p-5 shadow-xl">
-              <h3 className="text-sm font-semibold text-[#888] uppercase tracking-wider mb-4 flex items-center gap-2">
-                <History className="w-4 h-4" /> 生成状态
-              </h3>
-              <div className="py-8 text-center">
-                {pageStatus === 'polling' ? (
-                  <div className="space-y-3">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
-                    <p className="text-xs text-[#888]">正在构建您的建筑蓝图...</p>
-                  </div>
-                ) : pageStatus === 'success' ? (
-                  <div className="space-y-2">
-                    <div className="w-8 h-8 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto">✓</div>
-                    <p className="text-xs text-[#888]">生成成功！</p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-[#555]">暂无正在进行的任务</p>
-                )}
+            {/* Polling State */}
+            {pageStatus === 'polling' && !imageUrl && (
+              <div className="bg-card-bg border border-border rounded-xl p-12 shadow-sm text-center space-y-4">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">正在生成中...</p>
+                  <p className="text-xs text-muted-foreground">您的建筑蓝图即将呈现，请稍候</p>
+                </div>
               </div>
-            </div>
-          </aside>
-
+            )}
+          </div>
         </div>
       </main>
 
-      <footer className="py-12 text-center border-t border-[#262626] mt-12 bg-[#0a0a0a]">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-6 h-6 bg-blue-600 rounded"></div>
-            <span className="text-lg font-bold">孪数<span className="text-orange-400">AI</span></span>
-          </div>
-          <p className="text-xs text-[#555] max-w-md mx-auto leading-relaxed">
-            致力于为建筑师、室内设计师及城市规划师提供最前沿的 AI 辅助设计工具。
-            <br />
-            © {new Date().getFullYear()} 孪数 AI (Luanshuai AI). All rights reserved.
+      <footer className="py-8 border-t border-border mt-auto bg-muted/30">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-[10px] text-muted-foreground">
+            © {new Date().getFullYear()} 孪数 AI (Luanshuai AI) · 专业的建筑与室内设计 AI 工具
           </p>
         </div>
       </footer>
-      
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #262626;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #333;
-        }
-      `}</style>
     </div>
   );
 }
