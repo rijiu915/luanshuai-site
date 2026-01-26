@@ -1,6 +1,8 @@
 'use client';
 
+import { useRef } from 'react';
 import Image from 'next/image';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface Template {
   id: string;
@@ -67,40 +69,79 @@ interface TemplateSelectorProps {
 }
 
 export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === 'left' 
+        ? scrollLeft - clientWidth / 1.5 
+        : scrollLeft + clientWidth / 1.5;
+      
+      scrollRef.current.scrollTo({
+        left: scrollTo,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   return (
-    <div className="w-full py-4">
+    <div className="w-full py-4 relative group/selector">
       <div className="flex items-center justify-between mb-4 px-2">
         <h3 className="text-lg font-semibold text-foreground">快速开始 - 选择模板</h3>
         <span className="text-sm text-gray-500">向左滑动查看更多</span>
       </div>
       
-      <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar scroll-smooth snap-x">
-        {TEMPLATES.map((template) => (
-          <div
-            key={template.id}
-            onClick={() => onSelect(template)}
-            className="flex-shrink-0 w-40 md:w-48 group cursor-pointer snap-start"
-          >
-            <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-2 border border-border group-hover:border-blue-500 transition-colors">
-              <Image
-                src={template.image}
-                alt={template.name}
-                fill
-                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                unoptimized
-              />
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
-              <div className="absolute top-2 left-2">
-                <span className="px-2 py-0.5 bg-black/60 text-[10px] text-white rounded backdrop-blur-sm">
-                  {template.category}
-                </span>
+      <div className="relative">
+        {/* Left Arrow */}
+        <button
+          onClick={() => scroll('left')}
+          className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 p-2 bg-background/90 border border-border rounded-full shadow-xl opacity-0 group-hover/selector:opacity-100 transition-opacity hover:bg-background hover:scale-110 active:scale-95 hidden md:block"
+          aria-label="Scroll left"
+        >
+          <ChevronLeft className="w-6 h-6 text-foreground" />
+        </button>
+
+        {/* Right Arrow */}
+        <button
+          onClick={() => scroll('right')}
+          className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 p-2 bg-background/90 border border-border rounded-full shadow-xl opacity-0 group-hover/selector:opacity-100 transition-opacity hover:bg-background hover:scale-110 active:scale-95 hidden md:block"
+          aria-label="Scroll right"
+        >
+          <ChevronRight className="w-6 h-6 text-foreground" />
+        </button>
+
+        <div 
+          ref={scrollRef}
+          className="flex overflow-x-auto gap-4 pb-4 no-scrollbar scroll-smooth snap-x"
+        >
+          {TEMPLATES.map((template) => (
+            <div
+              key={template.id}
+              onClick={() => onSelect(template)}
+              className="flex-shrink-0 w-40 md:w-48 group cursor-pointer snap-start"
+            >
+              <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-2 border border-border group-hover:border-blue-500 transition-colors">
+                <Image
+                  src={template.image}
+                  alt={template.name}
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  unoptimized
+                />
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
+                <div className="absolute top-2 left-2">
+                  <span className="px-2 py-0.5 bg-black/60 text-[10px] text-white rounded backdrop-blur-sm">
+                    {template.category}
+                  </span>
+                </div>
               </div>
+              <h4 className="text-sm font-medium text-foreground truncate group-hover:text-blue-500 transition-colors">
+                {template.name}
+              </h4>
             </div>
-            <h4 className="text-sm font-medium text-foreground truncate group-hover:text-blue-500 transition-colors">
-              {template.name}
-            </h4>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <style jsx>{`
