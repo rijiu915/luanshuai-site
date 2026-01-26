@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-// 改为从 lib 导入
 import { authOptions } from "@/lib/auth-options";
-// 而不是从 route.ts 导入
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 
@@ -11,6 +9,8 @@ const RECHARGE_PLANS = [
   { id: 'plan_35', amount: 35, credits: 1000 },
   { id: 'plan_50', amount: 50, credits: 1450 },
   { id: 'plan_100', amount: 100, credits: 3000 },
+  { id: 'vip_monthly', amount: 29.9, type: 'VIP', duration: 30 },
+  { id: 'svip_monthly', amount: 59.9, type: 'SVIP', duration: 30 },
 ];
 
 export async function POST(request: NextRequest) {
@@ -25,42 +25,76 @@ export async function POST(request: NextRequest) {
     const plan = RECHARGE_PLANS.find(p => p.id === planId);
 
     if (!plan) {
-      return NextResponse.json({ error: '无效的充值方案' }, { status: 400 });
+      return NextResponse.json({ error: '无效的方案' }, { status: 400 });
     }
 
     const outTradeNo = `WX_${crypto.randomBytes(8).toString('hex')}`;
 
-    await prisma.$transaction([
-      prisma.transaction.create({
-        data: {
-          orderId: outTradeNo,
-          userId: parseInt(userId),
-          amount: plan.amount * 100,
-          credits: plan.credits,
-          provider: 'wechat',
-          status: 'completed',
-          completedAt: new Date(),
-        },
-      }),
-      prisma.user.update({
-        where: { id: parseInt(userId) },
-        data: {
-          balance: {
-            increment: plan.credits,
-          },
-        },
-      }),
-    ]);
+    if (plan.type) {
+      // VIP Plan
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + (plan.duration || 30));
 
-    return NextResponse.json({ 
-      success: true,
-      orderId: outTradeNo,
-      credits: plan.credits,
-    });
+      await prisma.$transaction([
+        prisma.transaction.create({
+          data: {
+            orderId: outTradeNo,
+            userId: parseInt(userId),
+            amount: Math.round(plan.amount * 100),
+            planId: planId,
+            provider: 'wechat',
+            status: 'completed',
+            completedAt: new Date(),
+          },
+        }),
+        prisma.user.update({
+          where: { id: parseInt(userId) },
+          data: {
+            vipLevel: plan.type,
+            vipExpiry: expiryDate,
+          },
+        }),
+      ]);
+
+      return NextResponse.json({ 
+        success: true, 
+        orderId: outTradeNo,
+        vipLevel: plan.type,
+      });
+    } else {
+      // Regular Credits Plan
+      await prisma.$transaction([
+        prisma.transaction.create({
+          data: {
+            orderId: outTradeNo,
+            userId: parseInt(userId),
+            amount: Math.round(plan.amount * 100),
+            credits: plan.credits,
+            provider: 'wechat',
+            status: 'completed',
+            completedAt: new Date(),
+          },
+        }),
+        prisma.user.update({
+          where: { id: parseInt(userId) },
+          data: {
+            balance: {
+              increment: plan.credits,
+            },
+          },
+        }),
+      ]);
+
+      return NextResponse.json({ 
+        success: true, 
+        orderId: outTradeNo,
+        credits: plan.credits,
+      });
+    }
   } catch (error: any) {
     console.error('WeChat Pay checkout error:', error);
     return NextResponse.json(
-      { error: error.message || '创建支付失败' },
+      { error: error.message || '操作失败' },
       { status: 500 }
     );
   }

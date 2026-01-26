@@ -34,34 +34,37 @@ export const authOptions: NextAuthOptions = {
           throw new Error('密码错误');
         }
 
-        return {
-          id: user.id.toString(),
-          email: user.email,
-          name: user.name,
-          balance: user.balance,
-        };
-      }
-    })
-  ],
-  session: {
-    strategy: 'jwt',
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.balance = (user as any).balance;
-      }
-      return token;
+          return {
+            id: user.id.toString(),
+            email: user.email,
+            name: user.name,
+            balance: user.balance,
+            vipLevel: user.vipLevel,
+          };
+        }
+      })
+    ],
+    session: {
+      strategy: 'jwt',
     },
-    async session({ session, token }) {
-      if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).balance = token.balance;
-      }
-      return session;
+    callbacks: {
+      async jwt({ token, user }) {
+        if (user) {
+          token.id = user.id;
+          token.balance = (user as any).balance;
+          token.vipLevel = (user as any).vipLevel;
+        }
+        return token;
+      },
+      async session({ session, token }) {
+        if (session.user) {
+          (session.user as any).id = token.id;
+          (session.user as any).balance = token.balance;
+          (session.user as any).vipLevel = token.vipLevel;
+        }
+        return session;
+      },
     },
-  },
   pages: {
     signIn: '/login',
   },

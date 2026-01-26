@@ -11,21 +11,29 @@ import { TemplateSelector, Template } from '@/components/template-selector';
 export default function HomePage() {
 
 
+  const { data: session } = useSession();
+  const [balance, setBalance] = useState<number | null>(null);
+  const [vipLevel, setVipLevel] = useState<string>('FREE');
+
 const fetchBalance = useCallback(async () => {
     try {
       const res = await fetch('/api/user/balance');
       const data = await res.json();
-      if (data.success) {
-       // setBalance(data.balance); // 假设你有个 setBalance
+      if (data.balance !== undefined) {
+        setBalance(data.balance);
+        setVipLevel(data.vipLevel || 'FREE');
       }
     } catch (err) {
       console.error('Failed to fetch balance', err);
     }
   }, []);
 
-const [showDropdown, setShowDropdown] = useState(false);
+  useEffect(() => {
+    if (session) {
+      fetchBalance();
+    }
+  }, [session, fetchBalance]);
 
-  const { data: session } = useSession();
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState('16:9');
   const [resolution, setResolution] = useState<'1K' | '2K' | '4K'>('2K');
@@ -196,8 +204,8 @@ const [showDropdown, setShowDropdown] = useState(false);
 
     const getPoints = () => {
       let cost = model === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60);
-      if (level === 'VIP') return Math.max(0, cost - 3);
-      if (level === 'SVIP') return Math.max(0, cost - 5);
+      if (vipLevel === 'VIP') return Math.max(0, cost - 3);
+      if (vipLevel === 'SVIP') return Math.max(0, cost - 5);
       return cost;
     };
     const currentPoints = getPoints();
@@ -306,26 +314,39 @@ const [showDropdown, setShowDropdown] = useState(false);
 
                 {/* 底部：左性能增强开关，右生成按钮 */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border">
-                  {/* 性能增强开关 */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">性能增强</span>
-                      <span className="text-[10px] text-gray-500 dark:text-gray-400">开启后效果更佳</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setModel(model === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                        model === 'nano-banana-pro' ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          model === 'nano-banana-pro' ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
+              {/* 性能增强开关 */}
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">性能增强</span>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">开启后效果更佳</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setModel(model === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                    model === 'nano-banana-pro' ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      model === 'nano-banana-pro' ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* VIP 购买入口 */}
+              <Link href="/vip" className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-lg group hover:from-yellow-500/20 transition-all">
+                <div className="p-1.5 bg-yellow-500 rounded-lg text-white group-hover:scale-110 transition-transform">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <p className="text-xs font-bold text-yellow-600 dark:text-yellow-500">加入 VIP 会员</p>
+                  <p className="text-[10px] text-yellow-600/70 dark:text-yellow-500/70">生图更优惠，特权多多</p>
+                </div>
+              </Link>
 
                 <div className="flex flex-col items-end gap-2">
                   <span className="text-sm text-gray-500 dark:text-gray-400">

@@ -16,25 +16,29 @@ interface PointsRecord {
 function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [balance, setBalance] = useState<number | null>(null);
-  const [history, setHistory] = useState<PointsRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchData = async () => {
-    if (!session?.user) return;
-    try {
-      const timestamp = new Date().getTime();
-      const [balanceRes, historyRes] = await Promise.all([
-        fetch(`/api/user/balance?t=${timestamp}`, { cache: 'no-store' }),
-        fetch(`/api/user/points-history?t=${timestamp}`, { cache: 'no-store' }),
-      ]);
-      
-      const balanceData = await balanceRes.json();
-      const historyData = await historyRes.json();
-
-      if (balanceData.balance !== undefined) {
-        setBalance(balanceData.balance);
-      }
+    const [balance, setBalance] = useState<number | null>(null);
+    const [vipLevel, setVipLevel] = useState<string>('FREE');
+    const [vipExpiry, setVipExpiry] = useState<string | null>(null);
+    const [history, setHistory] = useState<PointsRecord[]>([]);
+    const [loading, setLoading] = useState(true);
+  
+    const fetchData = async () => {
+      if (!session?.user) return;
+      try {
+        const timestamp = new Date().getTime();
+        const [balanceRes, historyRes] = await Promise.all([
+          fetch(`/api/user/balance?t=${timestamp}`, { cache: 'no-store' }),
+          fetch(`/api/user/points-history?t=${timestamp}`, { cache: 'no-store' }),
+        ]);
+        
+        const balanceData = await balanceRes.json();
+        const historyData = await historyRes.json();
+  
+        if (balanceData.balance !== undefined) {
+          setBalance(balanceData.balance);
+          setVipLevel(balanceData.vipLevel || 'FREE');
+          setVipExpiry(balanceData.vipExpiry);
+        }
       if (historyData.history) {
         setHistory(historyData.history);
       }
@@ -109,12 +113,35 @@ function ProfilePage() {
             </div>
           </div>
           
-          <div className="bg-input-bg rounded-lg p-4 border border-border">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">积分余额</p>
-            <p className="text-3xl font-bold text-orange-400">
-              {balance !== null ? balance.toLocaleString() : '0'}
-            </p>
-          </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 bg-input-bg rounded-lg p-4 border border-border">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">积分余额</p>
+                <p className="text-3xl font-bold text-orange-400">
+                  {balance !== null ? balance.toLocaleString() : '0'}
+                </p>
+              </div>
+                <div className="flex-1 bg-input-bg rounded-lg p-4 border border-border relative overflow-hidden group">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">会员等级</p>
+                  <div className="flex items-center gap-2">
+                    <p className={`text-3xl font-bold ${vipLevel === 'SVIP' ? 'text-purple-500' : vipLevel === 'VIP' ? 'text-blue-500' : 'text-gray-500'}`}>
+                      {vipLevel === 'FREE' ? '普通用户' : vipLevel}
+                    </p>
+                    {vipLevel !== 'FREE' && (
+                      <span className="px-2 py-0.5 bg-yellow-400 text-black text-[10px] font-bold rounded uppercase">
+                        Pro
+                      </span>
+                    )}
+                  </div>
+                  {vipExpiry && (
+                    <p className="text-xs text-gray-400 mt-2">
+                      有效期至: {new Date(vipExpiry).toLocaleDateString()}
+                    </p>
+                  )}
+                  <Link href="/vip" className="absolute top-4 right-4 text-xs text-blue-500 hover:underline">
+                    {vipLevel === 'FREE' ? '立即开通' : '续费会员'}
+                  </Link>
+                </div>
+            </div>
         </div>
 
         <div className="bg-card-bg rounded-xl p-6 border border-border shadow-sm">

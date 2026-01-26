@@ -14,20 +14,31 @@ export async function POST(req: NextRequest) {
 
   const { prompt, type, aspectRatio, imageUrls, model, resolution } = await req.json();
 
-  // 💰 Calculate points (3x multiplier applied)
-  let cost = 15;
-  if (model === 'nano-banana-pro') {
-    cost = resolution === '4K' ? 90 : 60;
-  }
+    // 💰 Calculate points (3x multiplier applied)
+    let cost = 15;
+    if (model === 'nano-banana-pro') {
+      cost = resolution === '4K' ? 90 : 60;
+    }
 
-  // Check balance
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  });
+    // Check balance and user info
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
 
-  if (!user || user.balance < cost) {
-    return Response.json({ code: 403, msg: `Insufficient balance. Need ${cost} points.` }, { status: 403 });
-  }
+    if (!user) {
+      return Response.json({ code: 404, msg: 'User not found' }, { status: 404 });
+    }
+
+    // Apply VIP discounts
+    if (user.vipLevel === 'VIP') {
+      cost = Math.max(0, cost - 3);
+    } else if (user.vipLevel === 'SVIP') {
+      cost = Math.max(0, cost - 5);
+    }
+
+    if (user.balance < cost) {
+      return Response.json({ code: 403, msg: `Insufficient balance. Need ${cost} points.` }, { status: 403 });
+    }
 
 
   // 🔑 Token 校验

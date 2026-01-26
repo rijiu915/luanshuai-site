@@ -14,10 +14,14 @@ export async function GET() {
     return NextResponse.json({ error: '未登录' }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { balance: true },
-  });
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { balance: true, vipLevel: true, vipExpiry: true },
+      });
 
-  return NextResponse.json({ balance: user?.balance ?? 0 });
+      return NextResponse.json({ 
+        balance: user?.balance ?? 0,
+        vipLevel: user?.vipLevel ?? 'FREE',
+        vipExpiry: user?.vipExpiry
+      });
 }
