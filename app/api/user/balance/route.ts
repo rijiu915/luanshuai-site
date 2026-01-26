@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+// 改为从 lib 导入
+import { authOptions } from "@/lib/auth-options";
+// 而不是从 route.ts 导入
 import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';

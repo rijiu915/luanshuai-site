@@ -30,7 +30,7 @@ export default function AssistantPage() {
   // ===== 分析图相关 =====
   const [analysisTaskId, setAnalysisTaskId] = useState<string | null>(null);
   const [analysisImageUrl, setAnalysisImageUrl] = useState<string | null>(null);
-  const [analysisStatus, setAnalysisStatus] = useState<"idle" | "submitting" | "polling" | "success" | "error">("idle");
+ const [analysisStatus, setAnalysisStatus] = useState<"idle" | "uploading" | "submitting" | "polling" | "success" | "error">("idle");
 
   // ===== 模型与尺寸设置 =====
   const [selectedModel, setSelectedModel] = useState<string>('nano-banana-pro'); // 默认选 Pro
@@ -95,9 +95,9 @@ export default function AssistantPage() {
   };
 
   // === 3. 轮询通用函数 ===
-  const startPolling = (
+   const startPolling = (
     taskId: string,
-    setStatus: React.Dispatch<React.SetStateAction<"idle" | "submitting" | "polling" | "success" | "error">>,
+    setStatus: React.Dispatch<React.SetStateAction<"idle" | "uploading" | "submitting" | "polling" | "success" | "error">>,
     setImageUrl: React.Dispatch<React.SetStateAction<string | null>>,
     type: 'effect' | 'analysis'
   ) => {

@@ -1,13 +1,29 @@
 // app/page.tsx
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect,useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { Navbar } from '@/components/navbar';
 
 export default function HomePage() {
+
+
+const fetchBalance = useCallback(async () => {
+    try {
+      const res = await fetch('/api/user/balance');
+      const data = await res.json();
+      if (data.success) {
+       // setBalance(data.balance); // 假设你有个 setBalance
+      }
+    } catch (err) {
+      console.error('Failed to fetch balance', err);
+    }
+  }, []);
+
+const [showDropdown, setShowDropdown] = useState(false);
+
   const { data: session } = useSession();
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState('16:9');

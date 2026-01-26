@@ -2,7 +2,6 @@
 
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/navbar';
 
@@ -14,7 +13,7 @@ interface PointsRecord {
   createdAt: string;
 }
 
-export function ProfilePage() {
+function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [balance, setBalance] = useState<number | null>(null);
@@ -92,62 +91,62 @@ export function ProfilePage() {
     return null;
   }
 
-    return (
-      <div className="min-h-screen bg-background text-foreground">
-        <Navbar />
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <Navbar />
 
-        <main className="container mx-auto px-4 py-8 max-w-4xl">
-          <div className="bg-card-bg rounded-xl p-6 mb-8 border border-border shadow-sm">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-2xl">
-                  {session.user.name?.charAt(0).toUpperCase() || session.user.email?.charAt(0).toUpperCase() || 'U'}
-                </span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">{session.user.name || '用户'}</h1>
-                <p className="text-gray-500 dark:text-gray-400">{session.user.email}</p>
-              </div>
+      <main className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="bg-card-bg rounded-xl p-6 mb-8 border border-border shadow-sm">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-2xl">
+                {session.user.name?.charAt(0).toUpperCase() || session.user.email?.charAt(0).toUpperCase() || 'U'}
+              </span>
             </div>
-            
-            <div className="bg-input-bg rounded-lg p-4 border border-border">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">积分余额</p>
-              <p className="text-3xl font-bold text-orange-400">
-                {balance !== null ? balance.toLocaleString() : '0'}
-              </p>
+            <div>
+              <h1 className="text-2xl font-bold">{session.user.name || '用户'}</h1>
+              <p className="text-gray-500 dark:text-gray-400">{session.user.email}</p>
             </div>
           </div>
+          
+          <div className="bg-input-bg rounded-lg p-4 border border-border">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">积分余额</p>
+            <p className="text-3xl font-bold text-orange-400">
+              {balance !== null ? balance.toLocaleString() : '0'}
+            </p>
+          </div>
+        </div>
 
-          <div className="bg-card-bg rounded-xl p-6 border border-border shadow-sm">
-            <h2 className="text-xl font-bold mb-4">积分使用记录</h2>
-            
-            {history.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-8">暂无记录</p>
-            ) : (
-              <div className="space-y-3">
-                {history.map((record) => (
-                  <div 
-                    key={record.id} 
-                    className="flex items-center justify-between p-4 bg-input-bg rounded-lg border border-border"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium">{record.description}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(record.createdAt).toLocaleString('zh-CN')}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <span className={`font-bold ${getTypeColor(record.type)}`}>
-                        {record.amount > 0 ? '+' : ''}{record.amount}
-                      </span>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{getTypeLabel(record.type)}</p>
-                    </div>
+        <div className="bg-card-bg rounded-xl p-6 border border-border shadow-sm">
+          <h2 className="text-xl font-bold mb-4">积分使用记录</h2>
+          
+          {history.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">暂无记录</p>
+          ) : (
+            <div className="space-y-3">
+              {history.map((record) => (
+                <div 
+                  key={record.id} 
+                  className="flex items-center justify-between p-4 bg-input-bg rounded-lg border border-border"
+                >
+                  <div className="flex-1">
+                    <p className="font-medium">{record.description}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {new Date(record.createdAt).toLocaleString('zh-CN')}
+                    </p>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </main>
+                  <div className="text-right">
+                    <span className={`font-bold ${getTypeColor(record.type)}`}>
+                      {record.amount > 0 ? '+' : ''}{record.amount}
+                    </span>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{getTypeLabel(record.type)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

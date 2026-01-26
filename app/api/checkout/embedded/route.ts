@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, RECHARGE_PLANS } from '@/lib/stripe';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
 
+// 改为从 lib 导入
+import { authOptions } from "@/lib/auth-options";
+// 而不是从 route.ts 导入
 export async function POST(request: NextRequest) {
   try {
     const sessionUser = await getServerSession(authOptions);
