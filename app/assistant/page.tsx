@@ -33,7 +33,7 @@ export default function AssistantPage() {
  const [analysisStatus, setAnalysisStatus] = useState<"idle" | "uploading" | "submitting" | "polling" | "success" | "error">("idle");
 
   // ===== 模型与尺寸设置 =====
-  const [selectedModel, setSelectedModel] = useState<string>('nano-banana-pro'); // 默认选 Pro
+  const [selectedModel, setSelectedModel] = useState<string>('nano-banana'); // 默认标准版
   const [aspectRatio, setAspectRatio] = useState<string>('16:9');
   const [resolution, setResolution] = useState<ResolutionOption>('2K'); // 默认分辨率为 2K
   const [balance, setBalance] = useState<number | null>(null);
@@ -319,27 +319,32 @@ export default function AssistantPage() {
             <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">上传中...</p>
           )}
 
-            {/* 性能增强开关 */}
-            <div className="mt-6 flex items-center justify-between">
-              <div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">性能增强</span>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  开启后支持更高分辨率与细节
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedModel(selectedModel === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                  selectedModel === 'nano-banana-pro' ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    selectedModel === 'nano-banana-pro' ? 'translate-x-6' : 'translate-x-1'
+            {/* Pro 模型切换开关 */}
+            <div className="mt-6 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30 bg-blue-50/30 dark:bg-blue-900/10 transition-all">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-gray-800 dark:text-gray-100">Pro 版专业模型</span>
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-md uppercase tracking-wider">PRO</span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                    开启后解锁更高清画质、精细构图与 4K 输出
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedModel(selectedModel === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 focus:outline-none shadow-inner ${
+                    selectedModel === 'nano-banana-pro' ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
                   }`}
-                />
-              </button>
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-out ${
+                      selectedModel === 'nano-banana-pro' ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
 
           {/* 添加比例选择 */}
