@@ -111,7 +111,7 @@ const [showDropdown, setShowDropdown] = useState(false);
   // ========== 轮询（不变）==========
   const pollTaskStatus = (taskId: string) => {
     let pollCount = 0;
-    const MAX_POLL = 30;
+    const MAX_POLL = 100;
     const interval = setInterval(async () => {
       pollCount++;
       try {
