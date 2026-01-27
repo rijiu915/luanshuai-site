@@ -29,7 +29,7 @@ const TEMPLATES: Template[] = [
     name: '总图填色渲染',
     badge: '生成',
     prompt: '彩色总平面图，景观填色，建筑阴影，手绘感，专业规划图纸风格',
-    image: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&q=80&w=1000',
+    image: 'https://images.unsplash.com/photo-1503387762-592dee58c460?auto=format&fit=crop&q=80&w=1000',
   },
   {
     id: 'material-analysis',
@@ -42,7 +42,7 @@ const TEMPLATES: Template[] = [
     id: 'bird-eye-view',
     name: '总平面与立面生鸟瞰',
     badge: '生成',
-    prompt: '建筑群鸟瞰图，城市景观，日景，广角镜头，航拍视角，宏大叙事',
+    prompt: '建筑群鸟瞰图，城市景观，日景，广广角镜头，航拍视角，宏大叙事',
     image: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&q=80&w=1000',
   },
   {
