@@ -30,10 +30,29 @@ const [showDropdown, setShowDropdown] = useState(false);
   const [resolution, setResolution] = useState<'1K' | '2K' | '4K'>('2K');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [model, setModel] = useState<'nano-banana' | 'nano-banana-pro'>('nano-banana-pro');
+  const [vipLevel, setVipLevel] = useState<string>('FREE');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [pageStatus, setPageStatus] = useState<'idle' | 'submitting' | 'polling' | 'success' | 'error'>('idle');
+
+  // ========== 余额和VIP等级获取 ==========
+  const fetchUserData = useCallback(async () => {
+    if (!session?.user) return;
+    try {
+      const res = await fetch('/api/user/balance');
+      const data = await res.json();
+      if (data.balance !== undefined) {
+        setVipLevel(data.vipLevel || 'FREE');
+      }
+    } catch (err) {
+      console.error('Failed to fetch user data', err);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
 
   // ========== 文件处理（不变）==========
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -193,7 +212,13 @@ const [showDropdown, setShowDropdown] = useState(false);
       window.location.reload();
     };
 
-    const currentPoints = model === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60);
+    const basePoints = model === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60);
+    let currentPoints = basePoints;
+    if (vipLevel === 'VIP') {
+      currentPoints = Math.max(0, basePoints - 3);
+    } else if (vipLevel === 'SVIP') {
+      currentPoints = Math.max(0, basePoints - 5);
+    }
 
       return (
         <div className="min-h-screen bg-background text-foreground">
@@ -306,16 +331,16 @@ const [showDropdown, setShowDropdown] = useState(false);
                         <span className={`text-sm font-bold transition-colors ${model === 'nano-banana-pro' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
                           {model === 'nano-banana-pro' ? 'Pro 专业版' : '标准版'}
                         </span>
-                        {model === 'nano-banana-pro' && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white font-black uppercase tracking-wider">
-                            PRO
-                          </span>
-                        )}
+                          {model === 'nano-banana-pro' && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white font-black uppercase tracking-wider">
+                              PRO
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">开启启用 Pro 高清模型</p>
-                    </div>
-                    <button
-                      type="button"
+                      <button
+                        type="button"
+
                       onClick={() => setModel(model === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none shadow-inner ${
                         model === 'nano-banana-pro' ? 'bg-blue-600 shadow-blue-900/20' : 'bg-gray-300 dark:bg-gray-600'
@@ -329,11 +354,24 @@ const [showDropdown, setShowDropdown] = useState(false);
                     </button>
                   </div>
 
-                <div className="flex flex-col items-end gap-2">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    本次生成所需积分: <span className="text-orange-400 font-bold">{currentPoints}</span>
-                  </span>
-                  <button
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex flex-col items-end">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        本次生成所需积分: <span className="text-orange-400 font-bold">{currentPoints}</span>
+                      </span>
+                      {vipLevel !== 'FREE' && (
+                        <span className="text-[11px] text-green-500 font-medium">
+                          {vipLevel} 专享优惠 -{vipLevel === 'SVIP' ? '5' : '3'} 积分
+                        </span>
+                      )}
+                      {vipLevel === 'FREE' && (
+                        <span className="text-[11px] text-gray-400">
+                          VIP 减 3，SVIP 减 5
+                        </span>
+                      )}
+                    </div>
+                    <button
+
                     onClick={handleGenerate}
                     disabled={pageStatus === 'submitting' || pageStatus === 'polling'}
                     className={`px-6 py-2 rounded-lg font-medium whitespace-nowrap text-white ${

@@ -1,5 +1,8 @@
 // app/api/generate-pro/route.ts
 import { NextRequest } from "next/server";
+import { getServerSession } from 'next-auth';
+import { authOptions } from "@/lib/auth-options";
+import { prisma } from '@/lib/prisma';
 
 const API_KEY = process.env.NANOBANANA_API_KEY;
 const NANO_GENERATE_URL = "https://api.nanobananaapi.ai/api/v1/nanobanana/generate-pro";
@@ -9,11 +12,36 @@ if (!API_KEY) {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return Response.json({ code: 401, msg: 'Please login first' }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
-
-    // ✅ 修正：使用正确的字段名 callbackUrl（全小写）
     const { prompt, resolution, aspectRatio, callbackUrl } = body;
+
+    // === 💰 Billing Logic ===
+    let cost = resolution === '4K' ? 90 : 60;
+    
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return Response.json({ code: 404, msg: 'User not found' }, { status: 404 });
+    }
+
+    // Apply VIP discounts
+    if (user.vipLevel === 'VIP') {
+      cost = Math.max(0, cost - 3);
+    } else if (user.vipLevel === 'SVIP') {
+      cost = Math.max(0, cost - 5);
+    }
+
+    if (user.balance < cost) {
+      return Response.json({ code: 403, msg: `Insufficient balance. Need ${cost} points.` }, { status: 403 });
+    }
 
     // === 参数校验 ===
     if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
@@ -22,6 +50,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+    // ... rest of the parameters validation ...
 
     if (!resolution || !["1K", "2K", "4K"].includes(resolution)) {
       return Response.json(
@@ -70,6 +99,23 @@ export async function POST(req: NextRequest) {
         { code: 502, message: "Upstream API returned invalid response." },
         { status: 502 }
       );
+    }
+
+    // 💰 Deduct points on success
+    if (apiResponse.code === 200 || apiResponse.code === 0) {
+      await prisma.user.update({
+        where: { email: session.user.email! },
+        data: { 
+          balance: { decrement: cost },
+          pointsHistory: {
+            create: {
+              amount: -cost,
+              type: 'consume',
+              description: `生成图像 (Pro 专业版)`,
+            }
+          }
+        },
+      });
     }
 
     return Response.json(apiResponse, { status: res.status });

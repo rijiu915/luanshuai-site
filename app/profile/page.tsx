@@ -124,15 +124,21 @@ function ProfilePage() {
                 <div className="flex-1 bg-input-bg rounded-lg p-4 border border-border relative overflow-hidden group">
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">会员等级</p>
                   <div className="flex items-center gap-2">
-                    <p className={`text-3xl font-bold ${vipLevel === 'SVIP' ? 'text-purple-500' : vipLevel === 'VIP' ? 'text-blue-500' : 'text-gray-500'}`}>
-                      {vipLevel === 'FREE' ? '普通用户' : vipLevel}
-                    </p>
-                    {vipLevel !== 'FREE' && (
-                      <span className="px-2 py-0.5 bg-yellow-400 text-black text-[10px] font-bold rounded uppercase">
-                        Pro
-                      </span>
-                    )}
-                  </div>
+                      <p className={`text-3xl font-bold ${vipLevel === 'SVIP' ? 'text-purple-500' : vipLevel === 'VIP' ? 'text-blue-500' : 'text-gray-500'}`}>
+                        {vipLevel === 'FREE' ? '普通用户' : vipLevel}
+                      </p>
+                      {vipLevel !== 'FREE' && (
+                        <div className="flex flex-col gap-1">
+                          <span className="px-2 py-0.5 bg-yellow-400 text-black text-[10px] font-bold rounded uppercase w-fit">
+                            Pro
+                          </span>
+                          <span className="text-[10px] text-green-500 font-bold">
+                            生图专享 -{vipLevel === 'SVIP' ? '5' : '3'} 积分/次
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
                   {vipExpiry && (
                     <p className="text-xs text-gray-400 mt-2">
                       有效期至: {new Date(vipExpiry).toLocaleDateString()}
