@@ -287,14 +287,6 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
                 </p>
               </div>
 
-              <div className="mb-8">
-                <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">
-                  核心关键词
-                </h4>
-                <div className="bg-input-bg border border-border rounded-xl p-4 text-sm text-gray-600 dark:text-gray-300 italic">
-                  "{selectedTemplate.prompt}"
-                </div>
-              </div>
 
               {/* Action Buttons */}
               <div className="flex gap-4">
