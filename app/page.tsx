@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect,useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X } from 'lucide-react';
+import { X, Maximize2, Download, ZoomIn } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { Navbar } from '@/components/navbar';
 import { TemplateSelector, Template } from '@/components/template-selector';
@@ -29,8 +29,49 @@ const [showDropdown, setShowDropdown] = useState(false);
     const [prompt, setPrompt] = useState('');
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
     const [aspectRatio, setAspectRatio] = useState('16:9');
-  const [resolution, setResolution] = useState<'1K' | '2K' | '4K'>('2K');
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+    const [adaptiveRatio, setAdaptiveRatio] = useState<string | null>(null);
+    const [useAdaptive, setUseAdaptive] = useState(false);
+    const [resolution, setResolution] = useState<'1K' | '2K' | '4K'>('2K');
+    const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+    const [isZoomed, setIsZoomed] = useState(false);
+
+    // ========== 检测第一张图的比例 ==========
+    useEffect(() => {
+      if (uploadedFiles.length > 0) {
+        const file = uploadedFiles[0];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new (window as any).Image();
+          img.onload = () => {
+            setAdaptiveRatio(`${img.width}:${img.height}`);
+          };
+          img.src = e.target?.result as string;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setAdaptiveRatio(null);
+        setUseAdaptive(false);
+      }
+    }, [uploadedFiles]);
+
+    const downloadImage = async (url: string) => {
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.body.appendChild(document.createElement('a'));
+        link.href = blobUrl;
+        link.download = `lstwin-${Date.now()}.png`;
+        link.click();
+        URL.revokeObjectURL(blobUrl);
+        link.remove();
+      } catch (err) {
+        console.error('Download failed:', err);
+        // 如果 fetch 失败（跨域），尝试直接打开
+        window.open(url, '_blank');
+      }
+    };
+
   const [model, setModel] = useState<'nano-banana' | 'nano-banana-pro'>('nano-banana-pro');
   const [vipLevel, setVipLevel] = useState<string>('FREE');
 
@@ -176,15 +217,16 @@ const [showDropdown, setShowDropdown] = useState(false);
           ? `${selectedTemplate.prompt}${prompt.trim() ? `，${prompt.trim()}` : ''}`
           : prompt.trim();
 
-        const requestBody: any = {
-          prompt: finalPrompt,
-          numImages: 1,
-          type,
-          aspectRatio: aspectRatio,
-          imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
-          model,
-          callBackUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/api/callback`,
-        };
+          const requestBody: any = {
+            prompt: finalPrompt,
+            numImages: 1,
+            type,
+            aspectRatio: useAdaptive && adaptiveRatio ? adaptiveRatio : aspectRatio,
+            imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+            model,
+            callBackUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/api/callback`,
+          };
+
 
       // ✅ 只有在选择 'nano-banana-pro' 时才添加 resolution 字段
       if (model === 'nano-banana-pro') {
@@ -363,27 +405,50 @@ const [showDropdown, setShowDropdown] = useState(false);
                           决定图像构图
                         </span>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          { label: '横屏 16:9', value: '16:9' },
-                          { label: '标准 4:3', value: '4:3' },
-                          { label: '正方形 1:1', value: '1:1' },
-                          { label: '人像 3:4', value: '3:4' },
-                          { label: '竖屏 9:16', value: '9:16' },
-                        ].map((ratio) => (
+                        <div className="flex flex-wrap gap-2">
+                          {/* 自适应选项 */}
                           <button
-                            key={ratio.value}
-                            onClick={() => setAspectRatio(ratio.value)}
+                            onClick={() => {
+                              if (adaptiveRatio) {
+                                setUseAdaptive(true);
+                                setAspectRatio('adaptive');
+                              } else {
+                                alert('请先上传参考图以使用自适应比例');
+                              }
+                            }}
                             className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all duration-200 ${
-                              aspectRatio === ratio.value
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20'
-                                : 'bg-input-bg border-border text-gray-500 hover:border-blue-500/50 hover:text-blue-500'
+                              useAdaptive
+                                ? 'bg-orange-600 text-white border-orange-600 shadow-lg shadow-orange-500/20'
+                                : 'bg-input-bg border-border text-gray-500 hover:border-orange-500/50 hover:text-orange-500'
                             }`}
                           >
-                            {ratio.label}
+                            自适应 {adaptiveRatio ? `(${adaptiveRatio})` : '(上传图片后开启)'}
                           </button>
-                        ))}
-                      </div>
+
+                          {[
+                            { label: '横屏 16:9', value: '16:9' },
+                            { label: '标准 4:3', value: '4:3' },
+                            { label: '正方形 1:1', value: '1:1' },
+                            { label: '人像 3:4', value: '3:4' },
+                            { label: '竖屏 9:16', value: '9:16' },
+                          ].map((ratio) => (
+                            <button
+                              key={ratio.value}
+                              onClick={() => {
+                                setAspectRatio(ratio.value);
+                                setUseAdaptive(false);
+                              }}
+                              className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all duration-200 ${
+                                aspectRatio === ratio.value && !useAdaptive
+                                  ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20'
+                                  : 'bg-input-bg border-border text-gray-500 hover:border-blue-500/50 hover:text-orange-500'
+                              }`}
+                            >
+                              {ratio.label}
+                            </button>
+                          ))}
+                        </div>
+
                     </div>
   
                     {/* 底部：左模型选择，右生成按钮 */}
