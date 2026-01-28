@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Download } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 
 // ===== 模型选项：仅两个 =====
@@ -33,7 +34,7 @@ export default function AssistantPage() {
  const [analysisStatus, setAnalysisStatus] = useState<"idle" | "uploading" | "submitting" | "polling" | "success" | "error">("idle");
 
   // ===== 模型与尺寸设置 =====
-  const [selectedModel, setSelectedModel] = useState<string>('nano-banana-pro'); // 默认选 Pro
+  const [selectedModel, setSelectedModel] = useState<string>('nano-banana'); // 默认选标准版
   const [aspectRatio, setAspectRatio] = useState<string>('16:9');
   const [resolution, setResolution] = useState<ResolutionOption>('2K'); // 默认分辨率为 2K
   const [balance, setBalance] = useState<number | null>(null);
@@ -157,6 +158,26 @@ export default function AssistantPage() {
     }, 2000);
 
     return () => clearInterval(interval);
+  };
+
+  const downloadImage = async (url: string) => {
+    try {
+      const proxyUrl = `/api/download?url=${encodeURIComponent(url)}`;
+      const response = await fetch(proxyUrl);
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `lstwin-assistant-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+    } catch (err) {
+      console.error('Download failed:', err);
+      window.open(url, '_blank');
+    }
   };
 
   // === 4. 轮询副作用 ===
@@ -414,16 +435,25 @@ export default function AssistantPage() {
               </div>
 
 
-            <div className="bg-input-bg rounded-lg h-64 flex items-center justify-center border border-border">
+            <div className="bg-input-bg rounded-lg h-64 flex items-center justify-center border border-border relative overflow-hidden group">
               {effectStatus === 'success' && effectImageUrl ? (
-                <Image
-                  src={effectImageUrl}
-                  alt="效果图"
-                  width={400}
-                  height={240}
-                  className="max-w-full max-h-full object-contain"
-                  unoptimized
-                />
+                <>
+                  <Image
+                    src={effectImageUrl}
+                    alt="效果图"
+                    width={400}
+                    height={240}
+                    className="max-w-full max-h-full object-contain"
+                    unoptimized
+                  />
+                  <button
+                    onClick={() => downloadImage(effectImageUrl)}
+                    className="absolute top-2 right-2 p-2 bg-white/80 dark:bg-black/50 backdrop-blur-sm rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-500 hover:text-white"
+                    title="下载效果图"
+                  >
+                    <Download className="w-5 h-5" />
+                  </button>
+                </>
               ) : effectStatus === 'polling' ? (
                 <div className="text-center">
                   <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-green-500 mb-2"></div>
@@ -455,16 +485,25 @@ export default function AssistantPage() {
               </div>
             </div>
 
-            <div className="bg-input-bg rounded-lg h-64 flex items-center justify-center border border-border">
+            <div className="bg-input-bg rounded-lg h-64 flex items-center justify-center border border-border relative overflow-hidden group">
               {analysisStatus === 'success' && analysisImageUrl ? (
-                <Image
-                  src={analysisImageUrl}
-                  alt="分析图"
-                  width={400}
-                  height={240}
-                  className="max-w-full max-h-full object-contain"
-                  unoptimized
-                />
+                <>
+                  <Image
+                    src={analysisImageUrl}
+                    alt="分析图"
+                    width={400}
+                    height={240}
+                    className="max-w-full max-h-full object-contain"
+                    unoptimized
+                  />
+                  <button
+                    onClick={() => downloadImage(analysisImageUrl)}
+                    className="absolute top-2 right-2 p-2 bg-white/80 dark:bg-black/50 backdrop-blur-sm rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-500 hover:text-white"
+                    title="下载分析图"
+                  >
+                    <Download className="w-5 h-5" />
+                  </button>
+                </>
               ) : analysisStatus === 'polling' ? (
                 <div className="text-center">
                   <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-purple-500 mb-2"></div>

@@ -74,7 +74,7 @@ const [showDropdown, setShowDropdown] = useState(false);
       }
     };
 
-  const [model, setModel] = useState<'nano-banana' | 'nano-banana-pro'>('nano-banana-pro');
+  const [model, setModel] = useState<'nano-banana' | 'nano-banana-pro'>('nano-banana');
   const [vipLevel, setVipLevel] = useState<string>('FREE');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
