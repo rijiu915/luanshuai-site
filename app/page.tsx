@@ -241,119 +241,116 @@ const [showDropdown, setShowDropdown] = useState(false);
               支持文生图 & 图生图（上传参考图）
             </p>
 
-              <TemplateSelector onSelect={(template) => {
-                setSelectedTemplate(template);
-                // 当选择模板时，清空之前的补充说明或保持现状
-                // setPrompt(''); 
-                // 自动滚动到输入区域或聚焦
-                window.scrollTo({ top: 400, behavior: 'smooth' });
-              }} />
+                <TemplateSelector onSelect={(template) => {
+                  setSelectedTemplate(template);
+                  // 自动滚动到输入区域或聚焦
+                  window.scrollTo({ top: 400, behavior: 'smooth' });
+                }} />
 
                 <div className="relative min-h-[500px] border border-border rounded-xl bg-card-bg p-6">
                 
                 {selectedTemplate && (
-                  <div className="mb-4 flex items-center justify-between bg-blue-500/10 border border-blue-500/20 rounded-lg px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-blue-500 font-bold text-sm">已应用模板: {selectedTemplate.name}</span>
-                      <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded font-bold uppercase">{selectedTemplate.badge}</span>
+                  <div className="mb-6 animate-in slide-in-from-top-4 duration-300">
+                    <div className="flex items-center justify-between bg-blue-500/10 border border-blue-500/20 rounded-xl px-5 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-blue-500/30">
+                          <Image src={selectedTemplate.image} alt={selectedTemplate.name} fill className="object-cover" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-blue-500 font-bold">已应用: {selectedTemplate.name}</span>
+                            <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded font-bold uppercase">{selectedTemplate.badge}</span>
+                          </div>
+                          <p className="text-xs text-blue-500/70 mt-0.5">提示：模板内置专业提示词已隐藏，您可以继续在下方输入补充说明。</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setSelectedTemplate(null)}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all"
+                        title="移除模板"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
                     </div>
-                    <button 
-                      onClick={() => setSelectedTemplate(null)}
-                      className="text-gray-400 hover:text-red-500 transition-colors text-sm font-medium"
-                    >
-                      移除模板
-                    </button>
                   </div>
                 )}
 
                 {/* Prompt */}
-                <div className="mb-6">
-                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2 font-medium">
-                    {selectedTemplate ? '补充说明 (可选)' : '描述您的创作意图'}
-                  </label>
+                <div className="mb-8">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {selectedTemplate ? '补充说明' : '描述您的创作意图'}
+                    </label>
+                    {selectedTemplate && (
+                      <span className="text-[10px] text-blue-500 font-medium px-2 py-0.5 bg-blue-500/5 rounded-full border border-blue-500/10">
+                        双提示词合并发送
+                      </span>
+                    )}
+                  </div>
                   <textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    placeholder={selectedTemplate ? `为“${selectedTemplate.name}”添加补充细节，例如：增加周围植被、调整光影等...` : "例如：山地上的极简木屋..."}
-                    className="w-full h-24 p-4 bg-input-bg border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-foreground placeholder-gray-500"
+                    placeholder={selectedTemplate ? `请输入针对“${selectedTemplate.name}”的个性化补充说明（例如：调整材质颜色、修改环境光影等）...` : "例如：一个现代风格的半透明玻璃艺术馆，周围环绕着茂密的森林，夕阳余晖..."}
+                    className="w-full h-32 p-4 bg-input-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-foreground placeholder-gray-500 resize-none transition-all shadow-inner"
                   />
                 </div>
   
-              {/* 比例 & 分辨率 */}
-              <div className="flex flex-wrap gap-4 mb-6">
-                {/* 比例 */}
-                <div>
-                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">比例</label>
-                  <select
-                    value={aspectRatio}
-                    onChange={(e) => setAspectRatio(e.target.value)}
-                    className="bg-input-bg border border-border rounded px-3 py-2 text-foreground"
-                  >
-                    {['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'].map((r) => (
-                      <option key={r} value={r} className="bg-input-bg">{r}</option>
-                    ))}
-                  </select>
+              {/* 图片上传 */}
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {selectedTemplate ? '参考图上传' : '参考图 (可选)'}
+                  </label>
+                  {selectedTemplate && (
+                    <span className="text-[10px] text-orange-500 font-medium px-2 py-0.5 bg-orange-500/5 rounded-full border border-orange-500/10">
+                      建议上传以获得更精准效果
+                    </span>
+                  )}
                 </div>
-  
-                {/* 分辨率：仅在选择 'nano-banana-pro' 时显示 */}
-                {model === 'nano-banana-pro' && (
-                  <div>
-                    <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">分辨率</label>
-                    <select
-                      value={resolution}
-                      onChange={(e) => setResolution(e.target.value as '1K' | '2K' | '4K')}
-                      className="bg-input-bg border border-border rounded px-3 py-2 text-foreground"
-                    >
-                      <option value="1K" className="bg-input-bg">1K</option>
-                      <option value="2K" className="bg-input-bg">2K</option>
-                      <option value="4K" className="bg-input-bg">4K</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-
-            {/* 图片上传 */}
-            <div className="mb-6">
-              <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2 font-medium">
-                {selectedTemplate ? '参考图 (建议上传，以获得更精准的生成结果)' : '参考图 (可选，最多8张，每张≤5MB)'}
-              </label>
-              <div className={`flex flex-wrap gap-2 p-4 rounded-xl border-2 border-dashed transition-all ${selectedTemplate ? 'border-blue-500/50 bg-blue-500/5' : 'border-border hover:border-blue-500/30'}`}>
-                {uploadedFiles.map((file, index) => (
-                  <div key={index} className="relative w-16 h-16">
-                    <Image
-                      src={URL.createObjectURL(file)}
-                      alt={`preview-${index}`}
-                      width={64}
-                      height={64}
-                      className="object-cover rounded border border-border"
-                      unoptimized
-                    />
+                <div className={`flex flex-wrap gap-3 p-6 rounded-xl border-2 border-dashed transition-all duration-300 ${selectedTemplate ? 'border-blue-500 bg-blue-500/5 shadow-lg shadow-blue-500/5' : 'border-border hover:border-blue-500/30 bg-gray-50/50 dark:bg-gray-900/20'}`}>
+                  {uploadedFiles.map((file, index) => (
+                    <div key={index} className="relative w-20 h-20 group">
+                      <Image
+                        src={URL.createObjectURL(file)}
+                        alt={`preview-${index}`}
+                        width={80}
+                        height={80}
+                        className="object-cover rounded-lg border border-border shadow-sm group-hover:scale-105 transition-transform"
+                        unoptimized
+                      />
+                      <button
+                        onClick={() => removeFile(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm shadow-md hover:bg-red-600 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {uploadedFiles.length < 8 && (
                     <button
-                      onClick={() => removeFile(index)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                      onClick={triggerFileSelect}
+                      className={`w-20 h-20 border-2 border-dashed rounded-lg flex flex-col items-center justify-center transition-all ${selectedTemplate ? 'border-blue-400 text-blue-500 bg-blue-500/5 hover:bg-blue-500/10' : 'border-border text-gray-400 hover:border-blue-500 hover:text-blue-500'}`}
                     >
-                      ×
+                      <span className="text-2xl mb-1">+</span>
+                      <span className="text-[10px] font-bold">上传</span>
                     </button>
-                  </div>
-                ))}
-                {uploadedFiles.length < 8 && (
-                  <button
-                    onClick={triggerFileSelect}
-                    className="w-16 h-16 border-2 border-dashed border-border rounded flex items-center justify-center text-gray-400 hover:border-blue-500 hover:text-blue-500"
-                  >
-                    +
-                  </button>
-                )}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                />
+                  )}
+                  {uploadedFiles.length === 0 && selectedTemplate && (
+                    <div className="flex flex-col justify-center ml-2">
+                      <p className="text-sm text-blue-500/80 font-medium">点击上方区域上传参考图</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">上传参考图能让 AI 更准确地理解空间关系</p>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                  />
+                </div>
               </div>
-            </div>
 
                 {/* 底部：左模型选择，右生成按钮 */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border">

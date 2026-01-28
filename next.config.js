@@ -6,9 +6,15 @@ const nextConfig = {
       'images.pexels.com',
       'plus.unsplash.com',
       'pub-15ea01688b984f9f900edca1c6917f4c.r2.dev',
-      'slelguoygbfzlpylpxfs.supabase.co'
+      'slelguoygbfzlpylpxfs.supabase.co',
+      'jzai.pro'
     ],
     remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'jzai.pro',
+        pathname: '/**',
+      },
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
