@@ -353,39 +353,59 @@ const [showDropdown, setShowDropdown] = useState(false);
                 </div>
               </div>
 
-                {/* 底部：左模型选择，右生成按钮 */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border">
-                  {/* 模型选择开关 */}
-                    <div className="flex items-center gap-4 bg-input-bg p-3 rounded-xl border border-border/50">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm font-bold transition-colors ${model === 'nano-banana-pro' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                          {model === 'nano-banana-pro' ? 'Pro 专业版' : '标准版'}
-                        </span>
-                          {model === 'nano-banana-pro' && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white font-black uppercase tracking-wider">
-                              PRO
+                  {/* 底部：左模型选择，右生成按钮 */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border">
+                    <div className="flex flex-wrap items-center gap-4">
+                      {/* 模型选择开关 */}
+                      <div className="flex items-center gap-4 bg-input-bg p-3 rounded-xl border border-border/50">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm font-bold transition-colors ${model === 'nano-banana-pro' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                              {model === 'nano-banana-pro' ? 'Pro 专业版' : '标准版'}
                             </span>
-                          )}
+                            {model === 'nano-banana-pro' && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white font-black uppercase tracking-wider">
+                                PRO
+                              </span>
+                            )}
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => setModel(model === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none shadow-inner ${
+                            model === 'nano-banana-pro' ? 'bg-blue-600 shadow-blue-900/20' : 'bg-gray-300 dark:bg-gray-600'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-out ${
+                              model === 'nano-banana-pro' ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
                       </div>
-                      <button
-                        type="button"
 
-                      onClick={() => setModel(model === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none shadow-inner ${
-                        model === 'nano-banana-pro' ? 'bg-blue-600 shadow-blue-900/20' : 'bg-gray-300 dark:bg-gray-600'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-out ${
-                          model === 'nano-banana-pro' ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
+                      {/* 分辨率选择 - 仅在 Pro 模式显示 */}
+                      {model === 'nano-banana-pro' && (
+                        <div className="flex items-center gap-2 bg-input-bg p-2 rounded-xl border border-border/50 animate-in slide-in-from-left-2 duration-300">
+                          {(['1K', '2K', '4K'] as const).map((res) => (
+                            <button
+                              key={res}
+                              onClick={() => setResolution(res)}
+                              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                resolution === res
+                                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                                  : 'text-gray-500 hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800'
+                              }`}
+                            >
+                              {res}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
-                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex flex-col items-end gap-2">
                     <div className="flex flex-col items-end">
                       <span className="text-sm text-gray-500 dark:text-gray-400">
                         本次生成所需积分: <span className="text-orange-400 font-bold">{currentPoints}</span>
