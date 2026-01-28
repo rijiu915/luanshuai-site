@@ -350,10 +350,43 @@ const [showDropdown, setShowDropdown] = useState(false);
                     multiple
                     className="hidden"
                   />
+                  </div>
                 </div>
-              </div>
-
-                  {/* 底部：左模型选择，右生成按钮 */}
+  
+                    {/* 尺寸比例选择 */}
+                    <div className="mb-8">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          尺寸比例
+                        </label>
+                        <span className="text-[10px] text-gray-400 font-medium px-2 py-0.5 bg-gray-500/5 rounded-full border border-border">
+                          决定图像构图
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { label: '横屏 16:9', value: '16:9' },
+                          { label: '标准 4:3', value: '4:3' },
+                          { label: '正方形 1:1', value: '1:1' },
+                          { label: '人像 3:4', value: '3:4' },
+                          { label: '竖屏 9:16', value: '9:16' },
+                        ].map((ratio) => (
+                          <button
+                            key={ratio.value}
+                            onClick={() => setAspectRatio(ratio.value)}
+                            className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all duration-200 ${
+                              aspectRatio === ratio.value
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20'
+                                : 'bg-input-bg border-border text-gray-500 hover:border-blue-500/50 hover:text-blue-500'
+                            }`}
+                          >
+                            {ratio.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+  
+                    {/* 底部：左模型选择，右生成按钮 */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border">
                     <div className="flex flex-wrap items-center gap-4">
                       {/* 模型选择开关 */}
