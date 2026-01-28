@@ -540,16 +540,33 @@ const [showDropdown, setShowDropdown] = useState(false);
 
 
               {/* 预览 */}
-              <div className="mt-8 flex justify-center">
+              <div className="mt-8 flex justify-center items-start gap-4">
                 {pageStatus === 'success' && imageUrl ? (
-                  <Image
-                    src={imageUrl}
-                    alt="Generated"
-                    width={800}
-                    height={800}
-                    className="rounded-lg shadow-lg max-w-full"
-                    unoptimized
-                  />
+                  <>
+                    <button
+                      onClick={() => downloadImage(imageUrl)}
+                      className="flex flex-col items-center gap-2 p-3 bg-white/10 hover:bg-white/20 border border-border rounded-xl transition-all group shrink-0"
+                      title="下载图像"
+                    >
+                      <Download className="w-6 h-6 text-blue-500 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold text-gray-500">下载</span>
+                    </button>
+                    <div className="relative group cursor-zoom-in" onClick={() => setIsZoomed(true)}>
+                      <Image
+                        src={imageUrl}
+                        alt="Generated"
+                        width={800}
+                        height={800}
+                        className="rounded-lg shadow-lg max-w-full"
+                        unoptimized
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="bg-white/30 backdrop-blur-md p-3 rounded-full border border-white/40">
+                          <Maximize2 className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 ) : pageStatus === 'polling' ? (
                   <div className="text-center py-10">
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
@@ -559,6 +576,36 @@ const [showDropdown, setShowDropdown] = useState(false);
                   <div className="text-gray-400 py-10">点击"生成图像"开始创作</div>
                 )}
             </div>
+
+            {/* 灯箱预览 */}
+            {isZoomed && imageUrl && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
+                <button 
+                  onClick={() => setIsZoomed(false)}
+                  className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all z-10"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+                <div className="relative max-w-5xl max-h-[90vh] w-full h-full flex flex-col items-center justify-center gap-6">
+                  <Image
+                    src={imageUrl}
+                    alt="Zoomed"
+                    width={1600}
+                    height={1600}
+                    className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+                    unoptimized
+                  />
+                  <button
+                    onClick={() => downloadImage(imageUrl)}
+                    className="flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-xl shadow-blue-500/20 transition-all hover:scale-105 active:scale-95"
+                  >
+                    <Download className="w-6 h-6" />
+                    立即下载高清图
+                  </button>
+                </div>
+                <div className="absolute inset-0 -z-10" onClick={() => setIsZoomed(false)} />
+              </div>
+            )}
           </div>
         </div>
       </main>
