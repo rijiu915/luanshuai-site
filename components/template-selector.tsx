@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, X, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Check, LayoutGrid, List } from 'lucide-react';
 
 export interface Template {
   id: string;
@@ -391,6 +391,7 @@ const TEMPLATES: Template[] = [
 export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [isGridView, setIsGridView] = useState(false);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -409,58 +410,110 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
 
   return (
     <div className="mb-10 w-full">
-      <div className="flex justify-between items-end mb-4">
-        <h3 className="text-xl font-bold text-foreground">快速开始 - 选择模板</h3>
-        <span className="text-sm text-gray-400">向左滑动查看更多</span>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h3 className="text-xl font-bold text-foreground">快速开始 - 选择模板</h3>
+          <p className="text-xs text-gray-400 mt-1">
+            {isGridView ? '点击下方卡片查看详情并应用' : '向左滑动查看更多，点击卡片查看详情'}
+          </p>
+        </div>
+        <button
+          onClick={() => setIsGridView(!isGridView)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-all text-sm font-medium border border-blue-500/20"
+        >
+          {isGridView ? (
+            <>
+              <List className="w-4 h-4" />
+              收起列表
+            </>
+          ) : (
+            <>
+              <LayoutGrid className="w-4 h-4" />
+              查看全部
+            </>
+          )}
+        </button>
       </div>
 
-      <div className="relative group">
-        {/* Left Arrow */}
-        <button
-          onClick={() => scroll('left')}
-          className="absolute left-[-20px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center border border-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-50 dark:hover:bg-gray-700"
-        >
-          <ChevronLeft className="w-6 h-6 text-foreground" />
-        </button>
+      {!isGridView ? (
+        <div className="relative group">
+          {/* Left Arrow */}
+          <button
+            onClick={() => scroll('left')}
+            className="absolute left-[-20px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center border border-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <ChevronLeft className="w-6 h-6 text-foreground" />
+          </button>
 
-        {/* Scroll Container */}
-        <div
-          ref={scrollRef}
-          className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 px-1"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
+          {/* Scroll Container */}
+          <div
+            ref={scrollRef}
+            className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 px-1"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {TEMPLATES.map((template) => (
+              <div
+                key={template.id}
+                onClick={() => setSelectedTemplate(template)}
+                className="flex-shrink-0 w-[240px] cursor-pointer group/card"
+              >
+                <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-3 border border-border shadow-sm group-hover/card:shadow-md transition-all">
+                  <Image
+                    src={template.image}
+                    alt={template.name}
+                    fill
+                    className="object-cover group-hover/card:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[10px] text-white font-medium">
+                    {template.badge}
+                  </div>
+                </div>
+                <p className="text-sm font-medium text-foreground group-hover/card:text-blue-500 transition-colors line-clamp-2">
+                  {template.name}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Right Arrow */}
+          <button
+            onClick={() => scroll('right')}
+            className="absolute right-[-20px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center border border-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <ChevronRight className="w-6 h-6 text-foreground" />
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {TEMPLATES.map((template) => (
             <div
               key={template.id}
               onClick={() => setSelectedTemplate(template)}
-              className="flex-shrink-0 w-[240px] cursor-pointer group/card"
+              className="cursor-pointer group/card"
             >
-              <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-3 border border-border">
+              <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-3 border border-border shadow-sm group-hover/card:shadow-md transition-all">
                 <Image
                   src={template.image}
                   alt={template.name}
                   fill
-                  className="object-cover group-hover/card:scale-105 transition-transform duration-300"
+                  className="object-cover group-hover/card:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[10px] text-white font-medium">
                   {template.badge}
                 </div>
+                <div className="absolute inset-0 bg-blue-600/0 group-hover/card:bg-blue-600/10 transition-colors flex items-center justify-center opacity-0 group-hover/card:opacity-100">
+                  <span className="bg-white/90 dark:bg-gray-900/90 px-3 py-1 rounded-full text-[10px] font-bold text-blue-600 shadow-xl">
+                    查看详情
+                  </span>
+                </div>
               </div>
-              <p className="text-sm font-medium text-foreground group-hover/card:text-blue-500 transition-colors">
+              <p className="text-xs font-medium text-foreground group-hover/card:text-blue-500 transition-colors line-clamp-2 text-center">
                 {template.name}
               </p>
             </div>
           ))}
         </div>
-
-        {/* Right Arrow */}
-        <button
-          onClick={() => scroll('right')}
-          className="absolute right-[-20px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center border border-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-50 dark:hover:bg-gray-700"
-        >
-          <ChevronRight className="w-6 h-6 text-foreground" />
-        </button>
-      </div>
+      )}
 
       {/* Template Detail Modal */}
       {selectedTemplate && (
