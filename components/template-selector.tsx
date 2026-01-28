@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X, Check } from 'lucide-react';
 
@@ -425,17 +425,17 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
         </button>
 
         {/* Scroll Container */}
-          <div
-            ref={scrollRef}
-            className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 px-1"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {displayTemplates.map((template) => (
-              <div
-                key={template.id}
-                onClick={() => setSelectedTemplate(template)}
-                className="flex-shrink-0 w-[240px] cursor-pointer group/card"
-              >
+        <div
+          ref={scrollRef}
+          className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 px-1"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {TEMPLATES.map((template) => (
+            <div
+              key={template.id}
+              onClick={() => setSelectedTemplate(template)}
+              className="flex-shrink-0 w-[240px] cursor-pointer group/card"
+            >
               <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-3 border border-border">
                 <Image
                   src={template.image}
