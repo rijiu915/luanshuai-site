@@ -19,18 +19,18 @@ interface TemplateSelectorProps {
 
 const TEMPLATES: Template[] = [
   {
-    id: 'render-style',
+    id: 'render-style-analysis',
     name: '渲染风格分析',
     badge: '分析',
-    prompt: '建筑渲染风格分析，大师级作品，超写实，高细节，电影级光影，极简主义风格',
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1000',
-    description: '通过AI深度学习技术，对建筑效果图的材质、色彩、光影及构图风格进行多维度拆解与量化分析。',
+    prompt: '建筑渲染风格分析，光影色调识别，材质肌理解析，艺术氛围评价，专业建筑摄影视角',
+    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1000',
+    description: '深度解析效果图的色彩平衡、光影逻辑及材质表现，辅助设计师把握方案的视觉调性。',
   },
   {
     id: 'general-layout',
     name: '总图填色渲染',
     badge: '生成',
-    prompt: '彩色总平面图，景观填色，建筑阴影，手绘感，专业规划图纸风格',
+    prompt: '彩色总平面图，景观填色，建筑阴影，手绘感，专业规划图纸风格，高清纹理，铺装细节',
     image: 'https://images.unsplash.com/photo-1503387762-592dee58c460?auto=format&fit=crop&q=80&w=1000',
     description: '快速将黑白线稿总平面图转化为具有丰富色彩、铺装质感及植被景观的高品质渲染总图。',
   },
@@ -38,7 +38,7 @@ const TEMPLATES: Template[] = [
     id: 'material-analysis',
     name: '建筑材料分析',
     badge: '分析',
-    prompt: '建筑材料质感分析，混凝土、玻璃、木材对比，写实光影，材质细节展示',
+    prompt: '建筑材料质感分析，混凝土、玻璃、木材对比，写实光影，材质细节展示，构造节点逻辑',
     image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1000',
     description: '精准识别并解析建筑表皮材料，提供材质配搭方案建议，辅助深化阶段的立面材料选型。',
   },
@@ -46,7 +46,7 @@ const TEMPLATES: Template[] = [
     id: 'bird-eye-view',
     name: '总平立面转鸟瞰',
     badge: '生成',
-    prompt: '建筑群鸟瞰图，城市景观，日景，广角镜头，航拍视角，宏大叙事',
+    prompt: '建筑群鸟瞰图，基于总平面图与立面逻辑生成，城市景观，日景，广角镜头，航拍视角，宏大叙事',
     image: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&q=80&w=1000',
     description: '融合总平面布局与立面逻辑，一键生成宏大且真实的城市级或园区级建筑鸟瞰透视图。',
   },
@@ -54,7 +54,7 @@ const TEMPLATES: Template[] = [
     id: 'modify-render',
     name: '修改效果图',
     badge: '修改',
-    prompt: '对现有建筑效果图进行局部修改，增加植被，调整光照，优化材质表现',
+    prompt: '对现有建筑效果图进行局部修改，增加植被，调整光照，优化材质表现，局部重绘，细节增强',
     image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=1000',
     description: '针对已有效果图进行快速微调，如更换季节氛围、调整立面颜色或修补环境细节。',
   },
@@ -62,7 +62,7 @@ const TEMPLATES: Template[] = [
     id: 'style-transfer',
     name: '渲染风格迁移',
     badge: '生成',
-    prompt: '建筑渲染风格迁移，将参考图的艺术风格、光影氛围应用于目标模型中',
+    prompt: '建筑渲染风格迁移，将参考图的艺术风格、光影氛围应用于目标模型中，色彩一致性，意向表达',
     image: 'https://images.unsplash.com/photo-1518005020480-1099c11fb50a?auto=format&fit=crop&q=80&w=1000',
     description: '汲取大师作品的色彩平衡与光影调性，将其视觉灵魂精准赋予您的设计模型。',
   },
@@ -70,7 +70,7 @@ const TEMPLATES: Template[] = [
     id: 'large-bird-view',
     name: '多图参考大鸟瞰',
     badge: '生成',
-    prompt: '大尺度城市鸟瞰图，高精细节，真实环境模拟，多角度参考融合生成',
+    prompt: '大尺度城市鸟瞰图，高精细节，真实环境模拟，多角度参考融合生成，宏观规划表达',
     image: 'https://images.unsplash.com/photo-1449156001931-829f768ed659?auto=format&fit=crop&q=80&w=1000',
     description: '结合多张环境参考图与规划数据，生成细节极其丰富、地理环境真实的高规格大鸟瞰。',
   },
@@ -78,7 +78,7 @@ const TEMPLATES: Template[] = [
     id: 'sat-analysis',
     name: '卫星图生成分析图',
     badge: '分析',
-    prompt: '将原始卫星地图转化为极简建筑分析图，色块分区，道路流线标注',
+    prompt: '将原始卫星地图转化为极简建筑分析图，色块分区，道路流线标注，地理信息提取',
     image: 'https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?auto=format&fit=crop&q=80&w=1000',
     description: '从杂乱的卫星遥感图中提取城市肌理，自动生成清晰的地块属性与交通流线分析图。',
   },
@@ -86,7 +86,7 @@ const TEMPLATES: Template[] = [
     id: 'gen-analysis',
     name: '生成分析图',
     badge: '分析',
-    prompt: '建筑功能分析图，三维轴侧视图，爆炸图，色块区分功能分区',
+    prompt: '建筑功能分析图，三维轴侧视图，爆炸图，色块区分功能分区，逻辑清晰，简约风格',
     image: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=1000',
     description: '根据空间逻辑生成专业的体块功能、日照路径或视线引导等逻辑分析图。',
   },
@@ -94,7 +94,7 @@ const TEMPLATES: Template[] = [
     id: 'illus-analysis',
     name: '插画风分析图',
     badge: '风格',
-    prompt: '插画风格建筑分析图，扁平化设计，清爽色调，手绘元素，艺术感',
+    prompt: '插画风格建筑分析图，扁平化设计，清爽色调，手绘元素，艺术感，清新叙事',
     image: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=1000',
     description: '以极具艺术表现力的扁平插画风格呈现设计逻辑，适合竞赛及个性的作品集表达。',
   },
@@ -102,7 +102,7 @@ const TEMPLATES: Template[] = [
     id: 'competition-layout',
     name: '竞赛排版',
     badge: '工具',
-    prompt: '专业建筑竞赛排版，黄金分割构图，极简主义，清晰的图纸逻辑分布',
+    prompt: '专业建筑竞赛排版，黄金分割构图，极简主义，清晰的图纸逻辑分布，视觉平衡，高级感',
     image: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&q=80&w=1000',
     description: '基于视觉引导原理，自动优化图纸与文字的留白与比例，打造高溢价感的竞赛图板。',
   },
@@ -110,7 +110,7 @@ const TEMPLATES: Template[] = [
     id: 'mass-to-render',
     name: '白膜转效果图',
     badge: '生成',
-    prompt: '将建筑白膜模型渲染为超写实实景图，真实材质填充，环境配景优化',
+    prompt: '将建筑白膜模型渲染为超写实实景图，真实材质填充，环境配景优化，高质量光影，细腻纹理',
     image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1000',
     description: '直接利用粗糙的Sketchup白膜截图，瞬间赋予其石材、玻璃质感及写实的光环境。',
   },
@@ -118,7 +118,7 @@ const TEMPLATES: Template[] = [
     id: 'su-screenshot',
     name: 'SU 截图渲染',
     badge: '生成',
-    prompt: 'Sketchup模型截图快速渲染，极简风格，柔和光影，环境配景填充',
+    prompt: 'Sketchup模型截图快速渲染，极简风格，柔和光影，环境配景填充，方案意向表达',
     image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1000',
     description: '无需复杂参数设置，直接将SU视口截图升华为具有设计美感的高级意向表现图。',
   },
@@ -126,7 +126,7 @@ const TEMPLATES: Template[] = [
     id: 'site-analysis',
     name: '基地现状分析',
     badge: '分析',
-    prompt: '基地现状实景分析图，环境文脉标注，植被水体分布，高差分析',
+    prompt: '基地现状实景分析图，环境文脉标注，植被水体分布，高差分析，场地逻辑解读',
     image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=1000',
     description: '通过对航拍图或现场照片的识别，智能标注场地高差、核心景观及周边约束条件。',
   },
@@ -134,7 +134,7 @@ const TEMPLATES: Template[] = [
     id: 'facade-detail',
     name: '立面阶段详图',
     badge: '生成',
-    prompt: '建筑立面节点详图，构造展示，材料交接关系，专业制图风格',
+    prompt: '建筑立面节点详图，构造展示，材料交接关系，专业制图风格，技术细节表达',
     image: 'https://images.unsplash.com/photo-1517581177682-a085bb7ffb15?auto=format&fit=crop&q=80&w=1000',
     description: '生成针对立面细部的构造示意图，辅助解决构造逻辑，体现施工图深度的技术美学。',
   },
@@ -142,7 +142,7 @@ const TEMPLATES: Template[] = [
     id: 'floorplan-render',
     name: '户型图填色',
     badge: '生成',
-    prompt: '室内户型图彩色填色，家具布置，软装质感，生活氛围营造',
+    prompt: '室内户型图彩色填色，家具布置，软装质感，生活氛围营造，真实光影，温馨色调',
     image: 'https://images.unsplash.com/photo-1556912177-c54030639a6d?auto=format&fit=crop&q=80&w=1000',
     description: '将枯燥的CAD黑白户型图转化为温馨、带有家具质感与光影深度的商业营销图。',
   },
@@ -150,7 +150,7 @@ const TEMPLATES: Template[] = [
     id: 'sketch-to-render',
     name: '草图转效果图',
     badge: '生成',
-    prompt: '将手绘建筑草图转化为写实渲染图，保留手绘笔触灵魂，赋予真实质感',
+    prompt: '将手绘建筑草图转化为写实渲染图，保留手绘笔触灵魂，赋予真实质感，沉浸式场景',
     image: 'https://images.unsplash.com/photo-1515542641795-85ed3b821605?auto=format&fit=crop&q=80&w=1000',
     description: '保留设计师手绘草稿的灵动笔触与最初构思，将其快速演绎为具有沉浸感的真实场景。',
   },
@@ -158,7 +158,7 @@ const TEMPLATES: Template[] = [
     id: 'render-to-facade',
     name: '效果图生立面',
     badge: '生成',
-    prompt: '从建筑透视效果图生成正交立面图，比例严谨，构造清晰',
+    prompt: '从建筑透视效果图生成正交立面图，比例严谨，构造清晰，二维制图表达',
     image: 'https://images.unsplash.com/photo-1448630360428-65456885c650?auto=format&fit=crop&q=80&w=1000',
     description: '基于AI对三维空间的理解，逆向生成规整、具有制图比例感的二维正交立面图纸。',
   },
@@ -166,7 +166,7 @@ const TEMPLATES: Template[] = [
     id: 'interior-design',
     name: '毛胚房室内设计',
     badge: '生成',
-    prompt: '毛胚房实景生成室内装修效果，现代简约风格，高档材质，灯光渲染',
+    prompt: '毛胚房实景生成室内装修效果，现代简约风格，高档材质，灯光渲染，空间美学',
     image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&q=80&w=1000',
     description: '根据毛胚房实勘照片，自动匹配多种软装风格，一键生成极具空间质感的全屋软装方案。',
   },
@@ -174,7 +174,7 @@ const TEMPLATES: Template[] = [
     id: 'empty-site-design',
     name: '空地设计',
     badge: '生成',
-    prompt: '在空旷场地上生成建筑方案，环境融合，功能布局，整体规划',
+    prompt: '在空旷场地上生成建筑方案，环境融合，功能布局，整体规划，概念推敲',
     image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=1000',
     description: '基于空旷场地的地理特征，快速推敲多种可能的建筑体块组合及景观空间逻辑。',
   },
@@ -285,25 +285,16 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
 
             {/* Modal Content */}
             <div className="p-6 md:p-8">
-              <div className="mb-8">
-                <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">
-                  功能描述
-                </h4>
-                <p className="text-foreground leading-relaxed">
-                  {selectedTemplate.description || '暂无详细描述'}
-                </p>
-              </div>
-
-              <div className="mb-8">
-                <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">
-                  核心关键词
-                </h4>
-                <div className="bg-input-bg border border-border rounded-xl p-4 text-sm text-gray-600 dark:text-gray-300 italic">
-                  "{selectedTemplate.prompt}"
+                <div className="mb-8">
+                  <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">
+                    功能描述
+                  </h4>
+                  <p className="text-foreground leading-relaxed">
+                    {selectedTemplate.description || '暂无详细描述'}
+                  </p>
                 </div>
-              </div>
 
-              {/* Action Buttons */}
+                {/* Action Buttons */}
               <div className="flex gap-4">
                 <button
                   onClick={() => setSelectedTemplate(null)}

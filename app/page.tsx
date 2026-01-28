@@ -24,9 +24,10 @@ const fetchBalance = useCallback(async () => {
 
 const [showDropdown, setShowDropdown] = useState(false);
 
-  const { data: session } = useSession();
-  const [prompt, setPrompt] = useState('');
-  const [aspectRatio, setAspectRatio] = useState('16:9');
+    const { data: session } = useSession();
+    const [prompt, setPrompt] = useState('');
+    const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+    const [aspectRatio, setAspectRatio] = useState('16:9');
   const [resolution, setResolution] = useState<'1K' | '2K' | '4K'>('2K');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [model, setModel] = useState<'nano-banana' | 'nano-banana-pro'>('nano-banana-pro');
@@ -145,38 +146,44 @@ const [showDropdown, setShowDropdown] = useState(false);
     }, 2000);
   };
 
-  // ========== 生成逻辑（关键修改）==========
-  const handleGenerate = async () => {
-    if (!prompt.trim()) {
-      alert('请输入提示词');
-      return;
-    }
-
-    setPageStatus('submitting');
-    let imageUrls: string[] = [];
-
-    if (uploadedFiles.length > 0) {
-      try {
-        imageUrls = await uploadImages(uploadedFiles);
-      } catch (err) {
-        setPageStatus('error');
-        alert('图片上传失败，请重试');
+    // ========== 生成逻辑（关键修改）==========
+    const handleGenerate = async () => {
+      // 如果没有选模板且没有输入内容，报错
+      if (!selectedTemplate && !prompt.trim()) {
+        alert('请输入提示词或选择一个功能模板');
         return;
       }
-    }
+  
+      setPageStatus('submitting');
+      let imageUrls: string[] = [];
+  
+      if (uploadedFiles.length > 0) {
+        try {
+          imageUrls = await uploadImages(uploadedFiles);
+        } catch (err) {
+          setPageStatus('error');
+          alert('图片上传失败，请重试');
+          return;
+        }
+      }
+  
+      const type = imageUrls.length > 0 ? 'IMAGETOIAMGE' : 'TEXTTOIAMGE';
+  
+      try {
+        // 合并提示词：模板提示词 + 用户补充说明
+        const finalPrompt = selectedTemplate 
+          ? `${selectedTemplate.prompt}${prompt.trim() ? `，${prompt.trim()}` : ''}`
+          : prompt.trim();
 
-    const type = imageUrls.length > 0 ? 'IMAGETOIAMGE' : 'TEXTTOIAMGE';
-
-    try {
-      const requestBody: any = {
-        prompt: prompt.trim(),
-        numImages: 1,
-        type,
-        aspectRatio: aspectRatio,
-        imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
-        model,
-        callBackUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/api/callback`,
-      };
+        const requestBody: any = {
+          prompt: finalPrompt,
+          numImages: 1,
+          type,
+          aspectRatio: aspectRatio,
+          imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+          model,
+          callBackUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/api/callback`,
+        };
 
       // ✅ 只有在选择 'nano-banana-pro' 时才添加 resolution 字段
       if (model === 'nano-banana-pro') {
@@ -234,19 +241,43 @@ const [showDropdown, setShowDropdown] = useState(false);
               支持文生图 & 图生图（上传参考图）
             </p>
 
-            <TemplateSelector onSelect={(template) => setPrompt(template.prompt)} />
+              <TemplateSelector onSelect={(template) => {
+                setSelectedTemplate(template);
+                // 当选择模板时，清空之前的补充说明或保持现状
+                // setPrompt(''); 
+                // 自动滚动到输入区域或聚焦
+                window.scrollTo({ top: 400, behavior: 'smooth' });
+              }} />
 
-              <div className="relative min-h-[500px] border border-border rounded-xl bg-card-bg p-6">
+                <div className="relative min-h-[500px] border border-border rounded-xl bg-card-bg p-6">
+                
+                {selectedTemplate && (
+                  <div className="mb-4 flex items-center justify-between bg-blue-500/10 border border-blue-500/20 rounded-lg px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-500 font-bold text-sm">已应用模板: {selectedTemplate.name}</span>
+                      <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded font-bold uppercase">{selectedTemplate.badge}</span>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedTemplate(null)}
+                      className="text-gray-400 hover:text-red-500 transition-colors text-sm font-medium"
+                    >
+                      移除模板
+                    </button>
+                  </div>
+                )}
 
-              {/* Prompt */}
-              <div className="mb-6">
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="例如：山地上的极简木屋..."
-                  className="w-full h-24 p-4 bg-input-bg border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-foreground placeholder-gray-500"
-                />
-              </div>
+                {/* Prompt */}
+                <div className="mb-6">
+                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2 font-medium">
+                    {selectedTemplate ? '补充说明 (可选)' : '描述您的创作意图'}
+                  </label>
+                  <textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder={selectedTemplate ? `为“${selectedTemplate.name}”添加补充细节，例如：增加周围植被、调整光影等...` : "例如：山地上的极简木屋..."}
+                    className="w-full h-24 p-4 bg-input-bg border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-foreground placeholder-gray-500"
+                  />
+                </div>
   
               {/* 比例 & 分辨率 */}
               <div className="flex flex-wrap gap-4 mb-6">
@@ -283,8 +314,10 @@ const [showDropdown, setShowDropdown] = useState(false);
 
             {/* 图片上传 */}
             <div className="mb-6">
-              <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">参考图（可选，最多8张，每张≤5MB）</label>
-              <div className="flex flex-wrap gap-2">
+              <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2 font-medium">
+                {selectedTemplate ? '参考图 (建议上传，以获得更精准的生成结果)' : '参考图 (可选，最多8张，每张≤5MB)'}
+              </label>
+              <div className={`flex flex-wrap gap-2 p-4 rounded-xl border-2 border-dashed transition-all ${selectedTemplate ? 'border-blue-500/50 bg-blue-500/5' : 'border-border hover:border-blue-500/30'}`}>
                 {uploadedFiles.map((file, index) => (
                   <div key={index} className="relative w-16 h-16">
                     <Image
