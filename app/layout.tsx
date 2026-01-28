@@ -16,7 +16,7 @@ const robotoMono = Roboto_Mono({
 
 export const metadata: Metadata = {
   title: "孪数AI - 建筑概念图生成",
-  description: "用文字描述，生成建筑概念图",
+  description: "用文字描述，生成概念图",
 };
 
 export default function RootLayout({

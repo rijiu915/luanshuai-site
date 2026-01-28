@@ -228,7 +228,7 @@ const [showDropdown, setShowDropdown] = useState(false);
 
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl md:text-5xl font-bold text-center mb-6">
-            用文字描述，生成建筑概念图
+            用文字描述，生成概念图
           </h1>
             <p className="text-gray-500 dark:text-gray-400 text-center mb-10 max-w-2xl mx-auto">
               支持文生图 & 图生图（上传参考图）
@@ -415,7 +415,7 @@ const [showDropdown, setShowDropdown] = useState(false);
       </main>
 
       <footer className="py-6 text-center text-gray-400 text-sm border-t border-border">
-        © {new Date().getFullYear()} lsai — 建筑师的 AI 创作伙伴
+        © {new Date().getFullYear()} lstwin-空间营造师的创作伴侣————powered by nanobanana
       </footer>
     </div>
   );
