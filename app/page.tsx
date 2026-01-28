@@ -56,18 +56,20 @@ const [showDropdown, setShowDropdown] = useState(false);
 
     const downloadImage = async (url: string) => {
       try {
-        const response = await fetch(url);
+        const proxyUrl = `/api/download?url=${encodeURIComponent(url)}`;
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error('Download failed');
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
-        const link = document.body.appendChild(document.createElement('a'));
+        const link = document.createElement('a');
         link.href = blobUrl;
         link.download = `lstwin-${Date.now()}.png`;
+        document.body.appendChild(link);
         link.click();
-        URL.revokeObjectURL(blobUrl);
-        link.remove();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
       } catch (err) {
         console.error('Download failed:', err);
-        // 如果 fetch 失败（跨域），尝试直接打开
         window.open(url, '_blank');
       }
     };
