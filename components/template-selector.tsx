@@ -18,19 +18,12 @@ interface TemplateSelectorProps {
 }
 
 const TEMPLATES: Template[] = [
-  {
-    id: 'render-style-analysis',
-    name: '渲染风格分析',
-    badge: '分析',
-    prompt: '建筑渲染风格分析，光影色调识别，材质肌理解析，艺术氛围评价，专业建筑摄影视角',
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1000',
-    description: '深度解析效果图的色彩平衡、光影逻辑及材质表现，辅助设计师把握方案的视觉调性。',
-  },
+  
   {
     id: 'general-layout',
-    name: '总图填色渲染',
+    name: '卫星图风格总图填色渲染',
     badge: '生成',
-    prompt: '彩色总平面图，景观填色，建筑阴影，手绘感，专业规划图纸风格，高清纹理，铺装细节',
+    prompt: '将此总平面图转化为卫星图风格。在保留原有线条轮细节的基础上，屋顶为白色初质，道路为真实的卫星图路面，点缀绿色的树木植物，为整个画面添加柔和的投影，使其成为一张生动而立体的卫星图风格总平面，严格按照CAD线条来，不要增加任何其他元素',
     image: 'https://images.unsplash.com/photo-1503387762-592dee58c460?auto=format&fit=crop&q=80&w=1000',
     description: '快速将黑白线稿总平面图转化为具有丰富色彩、铺装质感及植被景观的高品质渲染总图。',
   },
@@ -38,7 +31,7 @@ const TEMPLATES: Template[] = [
     id: 'material-analysis',
     name: '建筑材料分析',
     badge: '分析',
-    prompt: '建筑材料质感分析，混凝土、玻璃、木材对比，写实光影，材质细节展示，构造节点逻辑',
+    prompt: '分析这张立面图所用的材料，再图上标注出来，并放一块材料样板图片做说明,排版优美.中文标注',
     image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1000',
     description: '精准识别并解析建筑表皮材料，提供材质配搭方案建议，辅助深化阶段的立面材料选型。',
   },
@@ -46,7 +39,7 @@ const TEMPLATES: Template[] = [
     id: 'bird-eye-view',
     name: '总平立面转鸟瞰',
     badge: '生成',
-    prompt: '建筑群鸟瞰图，基于总平面图与立面逻辑生成，城市景观，日景，广角镜头，航拍视角，宏大叙事',
+    prompt: '根据立面参考与总图生成住宅区鸟瞰效果图',
     image: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&q=80&w=1000',
     description: '融合总平面布局与立面逻辑，一键生成宏大且真实的城市级或园区级建筑鸟瞰透视图。',
   },
@@ -54,25 +47,25 @@ const TEMPLATES: Template[] = [
     id: 'modify-render',
     name: '修改效果图',
     badge: '修改',
-    prompt: '对现有建筑效果图进行局部修改，增加植被，调整光照，优化材质表现，局部重绘，细节增强',
+    prompt: '根据图2的指示和修改意见，修改图1效果图',
     image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=1000',
-    description: '针对已有效果图进行快速微调，如更换季节氛围、调整立面颜色或修补环境细节。',
+    description: '针对已有效果图进行快速微调，如更换季节氛围、调整立面颜色或修补环境细节。第一张放效果图，第二张放修改意见',
   },
   {
     id: 'style-transfer',
     name: '渲染风格迁移',
     badge: '生成',
-    prompt: '建筑渲染风格迁移，将参考图的艺术风格、光影氛围应用于目标模型中，色彩一致性，意向表达',
+    prompt: '渲染参考图1的SU模型，渲染的风格可以参考参考图2的效果,包括质感，灯光，环境表达，图片色调。确保是图1的摄像机镜头角度视角完全不变，建筑的轮线条完全和图1重叠。(一定要确保白模画幅与输出画幅一致，参考图截图成完全不同的画幅，不然容易出错)',
     image: 'https://images.unsplash.com/photo-1518005020480-1099c11fb50a?auto=format&fit=crop&q=80&w=1000',
-    description: '汲取大师作品的色彩平衡与光影调性，将其视觉灵魂精准赋予您的设计模型。',
+    description: '汲取大师作品的色彩平衡与光影调性，将其视觉灵魂精准赋予您的设计模型。模型图片放第一个，参考风格放第二个',
   },
   {
     id: 'large-bird-view',
     name: '多图参考大鸟瞰',
     badge: '生成',
-    prompt: '大尺度城市鸟瞰图，高精细节，真实环境模拟，多角度参考融合生成，宏观规划表达',
+    prompt: '按照图1 的标注功能和层数，以图2的总平面布局，以图3图4图5图6的立面风格，及箭头角度生成一张真实一点的鸟瞰效果图',
     image: 'https://images.unsplash.com/photo-1449156001931-829f768ed659?auto=format&fit=crop&q=80&w=1000',
-    description: '结合多张环境参考图与规划数据，生成细节极其丰富、地理环境真实的高规格大鸟瞰。',
+    description: '结合多张环境参考图与规划数据，生成细节极其丰富、地理环境真实的高规格大鸟瞰。图一放功能和层数，图二是总平面后面的是立面风格',
   },
   {
     id: 'sat-analysis',
@@ -285,16 +278,25 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
 
             {/* Modal Content */}
             <div className="p-6 md:p-8">
-                <div className="mb-8">
-                  <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">
-                    功能描述
-                  </h4>
-                  <p className="text-foreground leading-relaxed">
-                    {selectedTemplate.description || '暂无详细描述'}
-                  </p>
-                </div>
+              <div className="mb-8">
+                <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">
+                  功能描述
+                </h4>
+                <p className="text-foreground leading-relaxed">
+                  {selectedTemplate.description || '暂无详细描述'}
+                </p>
+              </div>
 
-                {/* Action Buttons */}
+              <div className="mb-8">
+                <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">
+                  核心关键词
+                </h4>
+                <div className="bg-input-bg border border-border rounded-xl p-4 text-sm text-gray-600 dark:text-gray-300 italic">
+                  "{selectedTemplate.prompt}"
+                </div>
+              </div>
+
+              {/* Action Buttons */}
               <div className="flex gap-4">
                 <button
                   onClick={() => setSelectedTemplate(null)}
