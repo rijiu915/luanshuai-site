@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X, Check } from 'lucide-react';
 
@@ -113,7 +113,7 @@ const TEMPLATES: Template[] = [
     "badge": "生成",
     "prompt": "设计豪宅小区景观总图并填色，高级感，素雅，建筑用白色。去掉所有文字 不要增加任何建筑体块。景观设计要自然丰富。",
     "image": "https://jzai.pro/static/images/examples/837489fd-d900-45ad-9d13-876152ab0919.webp",
-    "description": "将基础线稿或模型快速转化为具有丰富质感和光影效果的总图景观设计填色，极大提升出图效率。"
+    "description": "将基础线稿或模型快速转化为具有丰富质感 and 光影效果的总图景观设计填色，极大提升出图效率。"
   },
   {
     "id": "生成竞赛排版",
@@ -153,7 +153,7 @@ const TEMPLATES: Template[] = [
     "badge": "生成",
     "prompt": "把左图的模型参考右图效果，做一张真实一点的效果图。保持摄像机镜头视角角度完全不变，建筑轮廓形态完全不变。",
     "image": "https://jzai.pro/static/images/examples/056e3fe6-6c5d-4ba3-8c55-578fe1a0433e.webp",
-    "description": "将基础线稿或模型快速转化为具有丰富质感和光影效果的SU模型渲染，极大提升出图效率。"
+    "description": "将基础线稿或模型快速转化为具有丰富质感 and 光影效果的SU模型渲染，极大提升出图效率。"
   },
   {
     "id": "基地现状分析",
@@ -169,7 +169,7 @@ const TEMPLATES: Template[] = [
     "badge": "生成",
     "prompt": "根据参考为总图填色，生成图的建筑轮廓形状、位置必须与图1的线稿匹配. 整体色彩、材质质感和绘图风格请参考图2。结果应是“具有图2风格的图1”。(一定要确保白模画幅与输出画幅一致，参考图截图成完全不同的画幅，不然容易出错)",
     "image": "https://jzai.pro/static/images/examples/c90261d9-03e4-4ea8-a114-5097014e9af3.webp",
-    "description": "将基础线稿或模型快速转化为具有丰富质感和光影效果的根据参考总图填色，极大提升出图效率。"
+    "description": "将基础线稿或模型快速转化为具有丰富质感 and 光影效果的根据参考总图填色，极大提升出图效率。"
   },
   {
     "id": "草模参考效果图生图",
@@ -193,7 +193,7 @@ const TEMPLATES: Template[] = [
     "badge": "生成",
     "prompt": "为这张住宅建筑平面图填色，不同功能使用不同的颜色，公共区域使用灰色，颜色要素雅，体现设计美",
     "image": "https://jzai.pro/static/images/examples/02f62716-d9d4-4ee7-82e5-86748806481a.png",
-    "description": "将基础线稿或模型快速转化为具有丰富质感和光影效果的户型图填色，极大提升出图效率。"
+    "description": "将基础线稿或模型快速转化为具有丰富质感 and 光影效果的户型图填色，极大提升出图效率。"
   },
   {
     "id": "效果图转图块分析图",
@@ -223,7 +223,7 @@ const TEMPLATES: Template[] = [
     "id": "更改鸟瞰图角度",
     "name": "更改鸟瞰图角度",
     "badge": "编辑",
-    "prompt": "以提供的鸟瞰建筑场景为基础，保持建筑的整体形态、结构细节及与周边地形（如道路、绿地、水体等）的空间关系完全不变。将观察视角改变，生成一个低角度斜侧视图。新视角应能清晰展示建筑立面与右侧环境的衔接，同时保留原始场景的光照条件与材质质感。确保画面具有空间纵深感，避免建筑变形或地形扭曲。",
+    "prompt": "以提供的鸟瞰建筑场景为基础，保持建筑的整体形态、结构细节及与周边地形（如道路、绿地、水体等）的空间关系完全不变。将观察视角改变，生成一个低角度斜侧视图。新视角应能清晰展示建筑立面与右侧环境的衔接，同时保留原始场景的光照条件与材质质感。确保画面具有空间纵深感，避免建筑变形 or 地形扭曲。",
     "image": "https://jzai.pro/static/images/examples/2059c30f-37b4-4dc0-8d35-db70bebbb91c.webp",
     "description": "利用 AI 技术实现更改鸟瞰图角度，通过精准的提示词控制，快速产出高质量的建筑设计相关成果。"
   },
@@ -231,7 +231,7 @@ const TEMPLATES: Template[] = [
     "id": "用箭头表达新的角度",
     "name": "用箭头表达新的角度",
     "badge": "生成",
-    "prompt": "以提供的鸟瞰建筑场景为基础，保持建筑的整体形态、结构细节及与周边地形（如道路、绿地、水体等）的空间关系完全不变。将观察视角改变，改变的视角参考我第二张图红色箭头方向。新视角应能清晰展示建筑立面与环境的衔接，同时保留原始场景的光照条件与材质质感。确保画面具有空间纵深感，避免建筑变形或地形扭曲。",
+    "prompt": "以提供的鸟瞰建筑场景为基础，保持建筑的整体形态、结构细节及与周边地形（如道路、绿地、水体等）的空间关系完全不变。将观察视角改变，改变的视角参考我第二张图红色箭头方向。新视角应能清晰展示建筑立面与环境的衔接，同时保留原始场景的光照条件与材质质感。确保画面具有空间纵深感，避免建筑变形 or 地形扭曲。",
     "image": "https://jzai.pro/static/images/examples/a862cf80-57f6-46db-b824-32a720dbdb64.webp",
     "description": "利用 AI 技术实现用箭头表达新的角度，通过精准的提示词控制，快速产出高质量的建筑设计相关成果。"
   },
@@ -337,7 +337,7 @@ const TEMPLATES: Template[] = [
     "badge": "生成",
     "prompt": "生成建筑立面图，SU渲染风格，设计感强",
     "image": "https://jzai.pro/static/images/examples/9cadee23-b4f8-4755-a5e6-d165c0c29792.png",
-    "description": "将基础线稿或模型快速转化为具有丰富质感 and 光影效果的效果图转SU渲染风格，极大提升出图效率。"
+    "description": "将基础线稿 or 模型快速转化为具有丰富质感 and 光影效果的效果图转SU渲染风格，极大提升出图效率。"
   },
   {
     "id": "效果图转剖面",
@@ -384,7 +384,6 @@ const TEMPLATES: Template[] = [
 export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-
   const [displayTemplates, setDisplayTemplates] = useState<Template[]>([]);
 
   useEffect(() => {
@@ -430,7 +429,7 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
           className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 px-1"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          {TEMPLATES.map((template) => (
+          {displayTemplates.map((template) => (
             <div
               key={template.id}
               onClick={() => setSelectedTemplate(template)}
