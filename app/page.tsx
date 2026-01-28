@@ -308,7 +308,7 @@ const [showDropdown, setShowDropdown] = useState(false);
                     </span>
                   )}
                 </div>
-                <div className={`flex flex-wrap gap-3 p-6 rounded-xl border-2 border-dashed transition-all duration-300 ${selectedTemplate ? 'border-blue-500 bg-blue-500/5 shadow-lg shadow-blue-500/5' : 'border-border hover:border-blue-500/30 bg-gray-50/50 dark:bg-gray-900/20'}`}>
+                <div className={`flex flex-wrap gap-3 p-6 rounded-xl border-2 border-dashed transition-all duration-300 ${selectedTemplate ? 'border-blue-500 bg-blue-500/5 shadow-lg shadow-blue-500/5' : 'border-border hover:border-blue-500/30 bg-input-bg/40'}`}>
                   {uploadedFiles.map((file, index) => (
                     <div key={index} className="relative w-20 h-20 group">
                       <Image
@@ -356,7 +356,7 @@ const [showDropdown, setShowDropdown] = useState(false);
                 {/* 底部：左模型选择，右生成按钮 */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border">
                   {/* 模型选择开关 */}
-                  <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-border/50">
+                    <div className="flex items-center gap-4 bg-input-bg p-3 rounded-xl border border-border/50">
                     <div>
                       <div className="flex items-center gap-2">
                         <span className={`text-sm font-bold transition-colors ${model === 'nano-banana-pro' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
