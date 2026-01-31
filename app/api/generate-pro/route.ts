@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { prompt, resolution, aspectRatio, callbackUrl } = body;
+    const { prompt, resolution, aspectRatio } = body;
 
     // === 💰 Billing Logic ===
     let cost = resolution === '4K' ? 90 : 60;
@@ -50,7 +50,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    // ... rest of the parameters validation ...
 
     if (!resolution || !["1K", "2K", "4K"].includes(resolution)) {
       return Response.json(
@@ -69,13 +68,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const callBackUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/callback`;
+
     // === 构造 payload（使用正确字段名）===
     const payload = {
       prompt: prompt.trim(),
       imageUrls: [], // txt2img 留空
       resolution,
       aspectRatio,
-      ...(callbackUrl && { callbackUrl }), // ✅ 正确：小写 c
+      callBackUrl,
     };
 
     // === 调用 NanoBanana API ===
@@ -101,21 +102,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 💰 Deduct points on success
+    // 💰 Deduct points on success and record task
     if (apiResponse.code === 200 || apiResponse.code === 0) {
-      await prisma.user.update({
-        where: { email: session.user.email! },
-        data: { 
-          balance: { decrement: cost },
-          pointsHistory: {
-            create: {
-              amount: -cost,
-              type: 'consume',
-              description: `生成图像 (Pro 专业版)`,
+      const taskId = apiResponse.data?.taskId || apiResponse.taskId;
+
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: user.id },
+          data: { 
+            balance: { decrement: cost },
+            pointsHistory: {
+              create: {
+                amount: -cost,
+                type: 'consume',
+                description: `生成图像 (Pro 专业版)`,
+              }
             }
+          },
+        }),
+        prisma.generationTask.create({
+          data: {
+            taskId: String(taskId),
+            userId: user.id,
+            cost: cost,
+            model: 'nano-banana-pro',
+            status: 'pending'
           }
-        },
-      });
+        })
+      ]);
     }
 
     return Response.json(apiResponse, { status: res.status });

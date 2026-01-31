@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { X, Maximize2, Download, ZoomIn } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { Navbar } from '@/components/navbar';
-import { TemplateSelector, Template } from '@/components/template-selector';
+import { TemplateSelector } from '@/components/template-selector';
+import { type Template } from '@/lib/templates';
 
 export default function HomePage() {
 
@@ -113,8 +114,8 @@ const [showDropdown, setShowDropdown] = useState(false);
         alert(`"${file.name}" 不是有效图片`);
         continue;
       }
-      if (file.size > 5 * 1024 * 1024) {
-        alert(`"${file.name}" 超过 5MB 限制`);
+      if (file.size > 20 * 1024 * 1024) {
+        alert(`"${file.name}" 超过 20MB 限制`);
         continue;
       }
       validFiles.push(file);
@@ -156,7 +157,7 @@ const [showDropdown, setShowDropdown] = useState(false);
   // ========== 轮询（不变）==========
   const pollTaskStatus = (taskId: string) => {
     let pollCount = 0;
-    const MAX_POLL = 100;
+    const MAX_POLL = 220;
     const interval = setInterval(async () => {
       pollCount++;
       try {

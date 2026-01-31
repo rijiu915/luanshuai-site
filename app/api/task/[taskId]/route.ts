@@ -1,5 +1,6 @@
 // app/api/task/[taskId]/route.ts
 import { NextRequest } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 const API_KEY = process.env.NANOBANANA_API_KEY;
 
@@ -32,6 +33,11 @@ export async function GET(
   }
 
   try {
+    // Check our local DB first to see if it's already failed/refunded
+    const localTask = await prisma.generationTask.findUnique({
+      where: { taskId: String(taskId) }
+    });
+
     const url = new URL('https://api.nanobananaapi.ai/api/v1/nanobanana/record-info');
     url.searchParams.set('taskId', taskId);
 
@@ -45,6 +51,49 @@ export async function GET(
     });
 
     const data = await res.json();
+    
+    // If NanoBanana API says it failed, and our local task is still pending, trigger refund
+    const apiCode = data.code;
+    const apiStatus = data.data?.status; // Some versions use data.status
+    
+    const isFailed = (apiCode !== 200 && apiCode !== 0 && apiCode !== undefined) || 
+                     (apiStatus === 'failed' || apiStatus === 'error');
+
+    if (isFailed && localTask && localTask.status === 'pending') {
+      console.log(`Polling detected failure for task ${taskId}, triggering refund...`);
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: localTask.userId },
+          data: { 
+            balance: { increment: localTask.cost },
+            pointsHistory: {
+              create: {
+                amount: localTask.cost,
+                type: 'refund',
+                description: `生成失败退回积分 (${localTask.model}) - 任务 ID: ${taskId} (通过轮询检测)`,
+              }
+            }
+          }
+        }),
+        prisma.generationTask.update({
+          where: { id: localTask.id },
+          data: { status: 'failed' }
+        })
+      ]);
+    } else if ((apiCode === 200 || apiCode === 0) && localTask && localTask.status === 'pending') {
+      // If NanoBanana API says it's done (and we have resultImageUrl), mark as success
+      // Note: We only mark as success if it's actually finished. 
+      // Most APIs return 200 even when pending, but status field varies.
+      // Based on typical behavior, if data.data.info.resultImageUrl exists, it's done.
+      const resultImageUrl = data.data?.info?.resultImageUrl || data.data?.resultImageUrl;
+      if (resultImageUrl) {
+        await prisma.generationTask.update({
+          where: { id: localTask.id },
+          data: { status: 'success' }
+        });
+      }
+    }
+
     return Response.json(data, { status: res.status });
 
   } catch (error) {

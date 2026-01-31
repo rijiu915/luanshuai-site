@@ -2,7 +2,7 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { NextRequest } from 'next/server';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 // 初始化 S3 客户端（兼容 R2）
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (file.size > MAX_FILE_SIZE) {
-    return Response.json({ error: 'File too large. Max size is 5MB.' }, { status: 400 });
+    return Response.json({ error: 'File too large. Max size is 20MB.' }, { status: 400 });
   }
 
   try {

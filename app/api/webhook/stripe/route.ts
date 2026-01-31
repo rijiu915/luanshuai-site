@@ -31,30 +31,52 @@ export async function POST(request: NextRequest) {
     
     if (session.payment_status === 'paid' && session.metadata) {
       const userId = parseInt(session.metadata.userId, 10);
-      const credits = parseInt(session.metadata.credits, 10);
+      const type = session.metadata.type || 'recharge';
 
-      if (!isNaN(userId) && !isNaN(credits) && credits > 0) {
-        try {
+      if (isNaN(userId)) {
+        console.error('Invalid userId in metadata');
+        return NextResponse.json({ error: 'Invalid userId' }, { status: 400 });
+      }
+
+      try {
+        if (type === 'recharge') {
+          const credits = parseInt(session.metadata.credits, 10);
+
+          if (!isNaN(credits) && credits > 0) {
+            await prisma.user.update({
+              where: { id: userId },
+              data: {
+                balance: {
+                  increment: credits,
+                },
+                pointsHistory: {
+                  create: {
+                    amount: credits,
+                    type: 'recharge',
+                    description: '在线充值',
+                  }
+                }
+              },
+            });
+            console.log(`User ${userId} recharged ${credits} credits. Session: ${session.id}`);
+          }
+        } else if (type === 'vip') {
+          const vipLevel = session.metadata.vipLevel;
+          const vipExpiry = new Date();
+          vipExpiry.setDate(vipExpiry.getDate() + 30);
+
           await prisma.user.update({
             where: { id: userId },
             data: {
-              balance: {
-                increment: credits,
-              },
-              pointsHistory: {
-                create: {
-                  amount: credits,
-                  type: 'recharge',
-                  description: '在线充值',
-                }
-              }
+              vipLevel: vipLevel,
+              vipExpiry: vipExpiry,
             },
           });
-          console.log(`User ${userId} recharged ${credits} credits. Session: ${session.id}`);
-        } catch (dbError) {
-          console.error('Database update failed:', dbError);
-          return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
+          console.log(`User ${userId} upgraded to ${vipLevel}. Session: ${session.id}`);
         }
+      } catch (dbError) {
+        console.error('Database update failed:', dbError);
+        return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
       }
     }
   }

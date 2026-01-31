@@ -18,6 +18,7 @@ model User {
   vipExpiry DateTime?
   createdAt DateTime @default(now())
   pointsHistory PointsHistory[]
+  generationTasks GenerationTask[]
 }
 
 model PointsHistory {
@@ -41,4 +42,15 @@ model Transaction {
   status      String   @default("pending")
   createdAt   DateTime @default(now())
   completedAt DateTime?
+}
+
+model GenerationTask {
+  id        Int      @id @default(autoincrement())
+  taskId    String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  cost      Int
+  status    String   @default("pending") // pending, success, failed, refunded
+  model     String
+  createdAt DateTime @default(now())
 }

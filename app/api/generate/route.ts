@@ -137,20 +137,33 @@ export async function POST(req: NextRequest) {
       return Response.json(data, { status: res.status || 500 });
     }
 
-    // 💰 Deduct points on success
-    await prisma.user.update({
-      where: { email: session.user.email! },
-      data: { 
-        balance: { decrement: cost },
-        pointsHistory: {
-          create: {
-            amount: -cost,
-            type: 'consume',
-            description: `生成图像 (${model})`,
+    const taskId = data.data?.taskId || data.data?.[0]?.taskId || data.taskId;
+
+    // 💰 Deduct points on success and record task
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { 
+          balance: { decrement: cost },
+          pointsHistory: {
+            create: {
+              amount: -cost,
+              type: 'consume',
+              description: `生成图像 (${model})`,
+            }
           }
+        },
+      }),
+      prisma.generationTask.create({
+        data: {
+          taskId: String(taskId),
+          userId: user.id,
+          cost: cost,
+          model: model || 'nano-banana',
+          status: 'pending'
         }
-      },
-    });
+      })
+    ]);
 
     return Response.json(data);
   } catch (error: any) {

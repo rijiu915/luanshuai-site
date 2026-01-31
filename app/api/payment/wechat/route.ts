@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from '@/lib/prisma';
+import { wxPay } from '@/lib/wechat';
 import crypto from 'crypto';
 
 const RECHARGE_PLANS = [
@@ -30,66 +31,38 @@ export async function POST(request: NextRequest) {
 
     const outTradeNo = `WX_${crypto.randomBytes(8).toString('hex')}`;
 
-    if (plan.type) {
-      // VIP Plan
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + (plan.duration || 30));
+    // 1. 创建订单记录 (状态为 pending)
+    await prisma.transaction.create({
+      data: {
+        orderId: outTradeNo,
+        userId: parseInt(userId),
+        amount: Math.round(plan.amount * 100),
+        credits: plan.credits || null,
+        planId: planId,
+        provider: 'wechat',
+        status: 'pending',
+      },
+    });
 
-      await prisma.$transaction([
-        prisma.transaction.create({
-          data: {
-            orderId: outTradeNo,
-            userId: parseInt(userId),
-            amount: Math.round(plan.amount * 100),
-            planId: planId,
-            provider: 'wechat',
-            status: 'completed',
-            completedAt: new Date(),
-          },
-        }),
-        prisma.user.update({
-          where: { id: parseInt(userId) },
-          data: {
-            vipLevel: plan.type,
-            vipExpiry: expiryDate,
-          },
-        }),
-      ]);
+    // 2. 调用微信支付 SDK 生成 Native 支付链接 (二维码)
+    const result = await wxPay.transactions_native({
+      description: plan.type ? `购买 ${plan.type} 会员` : `充值 ${plan.credits} 积分`,
+      out_trade_no: outTradeNo,
+      notify_url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook/wechat`,
+      amount: {
+        total: Math.round(plan.amount * 100),
+        currency: 'CNY',
+      },
+    });
 
+    if (result.code_url) {
       return NextResponse.json({ 
         success: true, 
-        orderId: outTradeNo,
-        vipLevel: plan.type,
+        qrCode: result.code_url,
+        orderId: outTradeNo
       });
     } else {
-      // Regular Credits Plan
-      await prisma.$transaction([
-        prisma.transaction.create({
-          data: {
-            orderId: outTradeNo,
-            userId: parseInt(userId),
-            amount: Math.round(plan.amount * 100),
-            credits: plan.credits,
-            provider: 'wechat',
-            status: 'completed',
-            completedAt: new Date(),
-          },
-        }),
-        prisma.user.update({
-          where: { id: parseInt(userId) },
-          data: {
-            balance: {
-              increment: plan.credits,
-            },
-          },
-        }),
-      ]);
-
-      return NextResponse.json({ 
-        success: true, 
-        orderId: outTradeNo,
-        credits: plan.credits,
-      });
+      throw new Error('获取微信支付链接失败');
     }
   } catch (error: any) {
     console.error('WeChat Pay checkout error:', error);
