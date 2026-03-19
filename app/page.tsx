@@ -3,13 +3,29 @@
 import { useState, useRef, useEffect,useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Maximize2, Download, ZoomIn } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { X, Maximize2, Download, ZoomIn, Pencil } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { Navbar } from '@/components/navbar';
 import { TemplateSelector } from '@/components/template-selector';
 import { type Template } from '@/lib/templates';
 
 export default function HomePage() {
+
+const router = useRouter();
+
+  const editImage = (file: File) => {
+    const url = URL.createObjectURL(file);
+    console.log('editImage called, creating URL:', url.substring(0, 50) + '...');
+    // Persist a small reference so returning won't lose the selected reference image
+    try {
+      sessionStorage.setItem('editorSourceImage', url);
+      console.log('Stored editorSourceImage in sessionStorage');
+    } catch (err) {
+      console.error('Failed to store editorSourceImage:', err);
+    }
+    router.push(`/editor?image=${encodeURIComponent(url)}`);
+  };
 
 
 const fetchBalance = useCallback(async () => {
@@ -36,7 +52,146 @@ const [showDropdown, setShowDropdown] = useState(false);
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
     const [isZoomed, setIsZoomed] = useState(false);
 
-    // ========== 检测第一张图的比例 ==========
+      // Restore edited image (or original) when coming back from editor
+      useEffect(() => {
+        let cancelled = false;
+
+        const setFirstUploadFromUrl = async (url: string, filename: string, isEdited: boolean = false) => {
+          console.log('setFirstUploadFromUrl called, url:', url.substring(0, 50) + (url.length > 50 ? '...' : ''), 'isEdited:', isEdited);
+
+          try {
+            let file: File | null = null;
+
+            // 检查 URL 类型
+            if (url.startsWith('data:')) {
+              console.log('Processing Base64 data URL...');
+              // 使用 URL.createObjectURL 直接从 Base64 数据创建 blob
+              const response = await fetch(url);
+              if (!response.ok) {
+                console.error('Fetch failed with status:', response.status, response.statusText);
+                throw new Error(`Fetch failed: ${response.status} ${response.statusText}`);
+              }
+              const blob = await response.blob();
+              console.log('Blob fetched from Base64, size:', blob.size, 'type:', blob.type);
+              if (cancelled) {
+                console.log('Operation cancelled');
+                return;
+              }
+              if (blob.size === 0) {
+                console.error('Blob is empty!');
+                throw new Error('Blob is empty');
+              }
+              file = new File([blob], filename, { type: blob.type || 'image/png' });
+              console.log('File created from Base64:', file.name, file.size, file.type, 'lastModified:', file.lastModified);
+            } else if (url.startsWith('blob:')) {
+              console.log('Processing blob URL...');
+              // 对于 blob URL，我们需要先获取数据
+              const response = await fetch(url);
+              if (!response.ok) {
+                console.error('Fetch failed with status:', response.status, response.statusText);
+                throw new Error(`Fetch failed: ${response.status} ${response.statusText}`);
+              }
+              const blob = await response.blob();
+              console.log('Blob fetched from blob URL, size:', blob.size, 'type:', blob.type);
+              if (blob.size === 0) {
+                console.error('Blob is empty!');
+                throw new Error('Blob is empty');
+              }
+              file = new File([blob], filename, { type: blob.type || 'image/png' });
+              console.log('File created from blob URL:', file.name, file.size, file.type, 'lastModified:', file.lastModified);
+            } else {
+              console.error('Unsupported URL type:', url.substring(0, 50) + '...');
+              throw new Error('Unsupported URL type');
+            }
+
+            // 只有在成功创建 file 对象后才更新 uploadedFiles
+            if (file) {
+              setUploadedFiles((prev) => {
+                console.log('Setting uploadedFiles, previous length:', prev.length, 'files:', prev.map(f => f.name));
+                const next = [...prev];
+
+                if (isEdited) {
+                  // 如果是编辑后的图片，添加到数组中而不是替换
+                  console.log('Adding edited image as new file:', file.name);
+                  next.push(file);
+                } else {
+                  // 如果不是编辑后的图片，保持原有逻辑（替换第一个或添加新文件）
+                  if (next.length > 0) {
+                    console.log('Replacing first file:', next[0].name);
+                    next[0] = file;
+                  } else {
+                    console.log('Adding new file to empty array');
+                    next.push(file);
+                  }
+                }
+
+                console.log('New uploadedFiles length:', next.length, 'files:', next.map(f => f.name));
+
+                // 显示成功消息给用户
+                setTimeout(() => {
+                  console.log('Image restored successfully! New file:', file.name);
+                }, 0);
+
+                return next;
+              });
+              console.log('setUploadedFiles called');
+            } else {
+              console.error('File object is not available, skipping upload');
+            }
+
+          } catch (err: unknown) {
+            console.error('Failed to restore image:', err);
+            alert(`恢复图片失败: ${err instanceof Error ? err.message : String(err)}`);
+          } finally {
+            // blob: URLs can be safely revoked after we have copied into a File
+            if (url.startsWith('blob:')) {
+              console.log('Revoking blob URL:', url.substring(0, 30) + '...');
+              try {
+                URL.revokeObjectURL(url);
+                console.log('Blob URL revoked successfully');
+              } catch (revokeErr) {
+                console.warn('Failed to revoke blob URL:', revokeErr);
+              }
+            }
+          }
+        };
+
+        const checkEditorReturn = async () => {
+          console.log('checkEditorReturn called');
+          const edited = sessionStorage.getItem('editedImage');
+          console.log('sessionStorage editedImage:', edited ? 'exists' : 'null', 'value:', edited ? edited.substring(0, 50) + '...' : 'null');
+
+          if (edited) {
+            console.log('Found edited image in sessionStorage, processing...');
+            sessionStorage.removeItem('editedImage');
+            console.log('Removed editedImage from sessionStorage');
+            console.log('Processing edited image URL:', edited.substring(0, 50) + '...');
+            await setFirstUploadFromUrl(edited, `edited-${Date.now()}.png`, true);
+            console.log('setFirstUploadFromUrl completed');
+          } else {
+            console.log('No edited image found in sessionStorage');
+            // 如果从编辑器返回但没有编辑图片，恢复原始图片
+            const sourceImage = sessionStorage.getItem('editorSourceImage');
+            console.log('Checking editorSourceImage:', sourceImage ? 'exists' : 'null', 'value:', sourceImage ? sourceImage.substring(0, 50) + '...' : 'null');
+            if (sourceImage && uploadedFiles.length === 0) {
+              console.log('Restoring original image from editorSourceImage');
+              await setFirstUploadFromUrl(sourceImage, `reference-${Date.now()}.png`);
+              // 清理editorSourceImage，因为已经恢复了
+              sessionStorage.removeItem('editorSourceImage');
+            }
+          }
+        };
+
+        void checkEditorReturn();
+        const onFocus = () => void checkEditorReturn();
+        window.addEventListener('focus', onFocus);
+        return () => {
+          cancelled = true;
+          window.removeEventListener('focus', onFocus);
+        };
+      }, [uploadedFiles.length]); // 依赖uploadedFiles.length，当图片变化时检查
+
+      // ========== 检测第一张图的比例 ==========
     useEffect(() => {
       if (uploadedFiles.length > 0) {
         const file = uploadedFiles[0];
@@ -369,6 +524,13 @@ const [showDropdown, setShowDropdown] = useState(false);
                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm shadow-md hover:bg-red-600 transition-colors"
                       >
                         ×
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); editImage(file); }}
+                        className="absolute -bottom-2 -right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md hover:bg-blue-600 transition-colors opacity-0 group-hover:opacity-100"
+                        title="编辑图片"
+                      >
+                        <Pencil className="w-3 h-3" />
                       </button>
                     </div>
                   ))}
