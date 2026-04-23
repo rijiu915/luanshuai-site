@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, RECHARGE_PLANS, VIP_PLANS } from '@/lib/stripe';
-import { getLoginSession } from '@/lib/auth';
+import { auth } from '@/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getLoginSession();
-    if (!userId) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json({ error: '请先登录' }, { status: 401 });
     }
+
+    const userId = parseInt(session.user.id, 10);
 
     const { planId } = await request.json();
     
@@ -82,7 +84,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: '无效的方案' }, { status: 400 });
   } catch (error: any) {
-    console.error('Checkout error:', error);
     return NextResponse.json(
       { error: error.message || '创建支付失败' },
       { status: 500 }

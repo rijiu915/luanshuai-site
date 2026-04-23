@@ -7,6 +7,7 @@ declare module "next-auth" {
   interface User {
     id: string;
     balance?: number;
+    vipLevel?: string;
   }
 
   interface Session {
@@ -16,14 +17,16 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       balance?: number;
+      vipLevel?: string;
     };
   }
 }
 
-// 如果你使用 JWT 策略（session.strategy = 'jwt'），也需要扩展 token
+// JWT 策略扩展
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
     balance?: number;
+    vipLevel?: string;
   }
 }

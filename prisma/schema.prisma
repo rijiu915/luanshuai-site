@@ -9,14 +9,16 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String?
-  password  String
-  balance   Int      @default(0)
-  vipLevel  String   @default("FREE")
-  vipExpiry DateTime?
-  createdAt DateTime @default(now())
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  name         String?
+  password     String
+  balance      Int       @default(0)
+  vipLevel     String    @default("FREE")
+  vipExpiry    DateTime?
+  resetToken   String?   @unique
+  resetExpiry  DateTime?
+  createdAt    DateTime  @default(now())
   pointsHistory PointsHistory[]
   generationTasks GenerationTask[]
 }

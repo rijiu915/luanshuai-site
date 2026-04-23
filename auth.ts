@@ -4,6 +4,7 @@ import Credentials from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
+import { rateLimit, resetRateLimit } from "@/lib/rate-limit"
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -17,6 +18,12 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error('请输入邮箱和密码');
+        }
+
+        // 速率限制：同一邮箱 15 分钟内最多 5 次尝试
+        const limit = rateLimit(`login:${credentials.email}`, 5, 15 * 60 * 1000);
+        if (!limit.allowed) {
+          throw new Error(`登录尝试过多，请${limit.retryAfter}秒后再试`);
         }
 
         const user = await prisma.user.findUnique({
@@ -35,6 +42,9 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         if (!isPasswordCorrect) {
           throw new Error('密码错误');
         }
+
+        // 登录成功，重置速率限制
+        resetRateLimit(`login:${credentials.email}`);
 
         return {
           id: user.id.toString(),
@@ -63,9 +73,9 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id as string;
-        (session.user as any).balance = token.balance as number;
-        (session.user as any).vipLevel = token.vipLevel as number;
+        session.user.id = token.id as string;
+        session.user.balance = token.balance as number;
+        session.user.vipLevel = token.vipLevel as string;
       }
       return session;
     },

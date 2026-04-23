@@ -1,25 +1,31 @@
-// app/register/page.tsx
+// app/reset-password/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Check, X } from 'lucide-react';
 
-export default function RegisterPage() {
-  const [email, setEmail] = useState('');
+function ResetPasswordForm() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [tokenValid, setTokenValid] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
 
-  // 密码强度检查
+  useEffect(() => {
+    if (!token) {
+      setTokenValid(false);
+    }
+  }, [token]);
+
   const hasMinLength = password.length >= 8;
   const hasLetter = /[a-zA-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
@@ -31,18 +37,11 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
 
-    if (!email || !password || !confirmPassword) {
-      setError('请填写所有必填项');
-      setLoading(false);
-      return;
-    }
-
     if (!isPasswordValid) {
       setError('密码不符合强度要求');
       setLoading(false);
       return;
     }
-
     if (!isConfirmMatch) {
       setError('两次输入的密码不一致');
       setLoading(false);
@@ -50,10 +49,10 @@ export default function RegisterPage() {
     }
 
     try {
-      const res = await fetch('/api/register', {
+      const res = await fetch('/api/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ token, password }),
       });
 
       const data = await res.json();
@@ -64,11 +63,7 @@ export default function RegisterPage() {
           router.push('/login');
         }, 2000);
       } else {
-        if (res.status === 429) {
-          setError(data.error || '操作过于频繁，请稍后再试');
-        } else {
-          setError(data.error || '注册失败，请重试');
-        }
+        setError(data.error || '重置失败，请重试');
       }
     } catch {
       setError('网络错误，请检查连接');
@@ -77,11 +72,27 @@ export default function RegisterPage() {
     }
   };
 
+  if (!tokenValid) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-md bg-card-bg rounded-xl shadow-md p-8 space-y-6 border border-border text-center">
+          <h2 className="text-xl font-bold text-foreground">链接无效</h2>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">
+            该重置链接无效或已过期，请重新申请。
+          </p>
+          <Link href="/forgot-password" className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
+            重新发送重置链接
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-green-600 dark:text-green-400">注册成功！</h2>
+          <h2 className="text-2xl font-bold text-green-600 dark:text-green-400">密码重置成功！</h2>
           <p className="mt-2 text-gray-600 dark:text-gray-400">正在跳转到登录页...</p>
         </div>
       </div>
@@ -92,8 +103,8 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md bg-card-bg rounded-xl shadow-md p-8 space-y-6 border border-border">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-foreground">创建账户</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">加入我们，开始使用 AI 助手</p>
+          <h1 className="text-2xl font-bold text-foreground">重置密码</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">请输入新密码</p>
         </div>
 
         {error && (
@@ -103,41 +114,10 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 姓名 */}
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              姓名（可选）
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-input-bg text-foreground"
-              placeholder="张三"
-            />
-          </div>
-
-          {/* 邮箱 */}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              邮箱 <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-input-bg text-foreground"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          {/* 密码 */}
+          {/* 新密码 */}
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              密码 <span className="text-red-500">*</span>
+              新密码 <span className="text-red-500">*</span>
             </label>
             <div className="relative mt-1">
               <input
@@ -157,7 +137,6 @@ export default function RegisterPage() {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {/* 密码强度指示器 */}
             {password.length > 0 && (
               <div className="mt-2 space-y-1">
                 <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
@@ -176,10 +155,10 @@ export default function RegisterPage() {
             )}
           </div>
 
-          {/* 确认密码 */}
+          {/* 确认新密码 */}
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              确认密码 <span className="text-red-500">*</span>
+              确认新密码 <span className="text-red-500">*</span>
             </label>
             <div className="relative mt-1">
               <input
@@ -190,12 +169,10 @@ export default function RegisterPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className={`block w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-input-bg text-foreground ${
                   confirmPassword.length > 0
-                    ? isConfirmMatch
-                      ? 'border-green-500'
-                      : 'border-red-500'
+                    ? isConfirmMatch ? 'border-green-500' : 'border-red-500'
                     : 'border-border'
                 }`}
-                placeholder="再次输入密码"
+                placeholder="再次输入新密码"
               />
               <button
                 type="button"
@@ -207,7 +184,6 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* 注册按钮 */}
           <button
             type="submit"
             disabled={loading || !isPasswordValid || !isConfirmMatch}
@@ -217,17 +193,22 @@ export default function RegisterPage() {
                 : 'bg-blue-600 hover:bg-blue-700'
             } transition`}
           >
-            {loading ? '注册中...' : '注册'}
+            {loading ? '重置中...' : '重置密码'}
           </button>
         </form>
-
-        <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-          已有账户？{' '}
-          <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline">
-            立即登录
-          </Link>
-        </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-gray-500">加载中...</p>
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
