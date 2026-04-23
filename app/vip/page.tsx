@@ -223,9 +223,7 @@ function VIPContent() {
                       : 'border-border bg-card-bg hover:border-blue-300 dark:hover:border-blue-700'
                   }`}
                 >
-                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.336 14.156h-1.503l-.408-1.554H10.94l-.382 1.554H9.088l1.91-6.845h1.597l1.741 6.845zm-1.89-2.731l-.816-3.111-1.02 3.111h1.836zM12.5 9h-2v1h2V9z" />
-                  </svg>
+                  <span className="w-6 h-6 flex items-center justify-center rounded-md text-white text-xs font-bold" style={{ backgroundColor: '#1677FF' }}>支</span>
                   支付宝
                 </button>
                 <button
@@ -236,9 +234,7 @@ function VIPContent() {
                       : 'border-border bg-card-bg hover:border-green-300 dark:hover:border-green-700'
                   }`}
                 >
-                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm3.178 12.336c-.443.431-1.066.664-1.742.664-1.077 0-1.879-.582-1.879-1.289 0-.462.333-.86.86-1.11.266-.124.577-.188.905-.188.463 0 .86.131 1.155.367.142.113.313.173.491.173h.364c.237 0 .43.193.43.43s-.193.43-.43.43h-.154c-.237 0-.43.193-.43.43v.093zM8.822 14.336c-.443.431-1.066.664-1.742.664-1.077 0-1.879-.582-1.879-1.289 0-.462.333-.86.86-1.11.266-.124.577-.188.905-.188.463 0 .86.131 1.155.367.142.113.313.173.491.173h.364c.237 0 .43.193.43.43s-.193.43-.43.43h-.154c-.237 0-.43.193-.43.43v.093z" />
-                  </svg>
+                  <span className="w-6 h-6 flex items-center justify-center rounded-md text-white text-xs font-bold" style={{ backgroundColor: '#07C160' }}>微</span>
                   微信支付
                 </button>
               </div>
