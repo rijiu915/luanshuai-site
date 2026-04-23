@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from "@/lib/auth-options";
+import { auth } from "@/auth";
 import { prisma } from '@/lib/prisma';
-import { wxPay } from '@/lib/wechat';
+import { createNativeOrder } from '@/lib/wechat';
 import crypto from 'crypto';
 
 const RECHARGE_PLANS = [
@@ -16,7 +15,7 @@ const RECHARGE_PLANS = [
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: '请先登录' }, { status: 401 });
     }
@@ -44,26 +43,20 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 2. 调用微信支付 SDK 生成 Native 支付链接 (二维码)
-    const result = await wxPay.transactions_native({
+    // 2. 调用微信支付 Native 下单（生成二维码链接）
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const result = await createNativeOrder({
       description: plan.type ? `购买 ${plan.type} 会员` : `充值 ${plan.credits} 积分`,
-      out_trade_no: outTradeNo,
-      notify_url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook/wechat`,
-      amount: {
-        total: Math.round(plan.amount * 100),
-        currency: 'CNY',
-      },
+      outTradeNo: outTradeNo,
+      notifyUrl: `${siteUrl}/api/webhook/wechat`,
+      total: Math.round(plan.amount * 100),
     });
 
-    if (result.code_url) {
-      return NextResponse.json({ 
-        success: true, 
-        qrCode: result.code_url,
-        orderId: outTradeNo
-      });
-    } else {
-      throw new Error('获取微信支付链接失败');
-    }
+    return NextResponse.json({
+      success: true,
+      qrCode: result.qrCode,
+      orderId: result.orderId,
+    });
   } catch (error: any) {
     console.error('WeChat Pay checkout error:', error);
     return NextResponse.json(

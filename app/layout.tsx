@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Roboto_Mono } from "next/font/google";
 import "./globals.css";
-import { SessionProvider } from "@/lib/SessionProvider";
+import { CustomSessionProvider } from "@/lib/SessionProvider";
 import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({
@@ -25,19 +25,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh" suppressHydrationWarning>
-      <body
-        className={`${inter.variable} ${robotoMono.variable} antialiased`}
-      >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
+    <CustomSessionProvider>
+      <html lang="zh" suppressHydrationWarning>
+        <body
+          className={`${inter.variable} ${robotoMono.variable} antialiased`}
         >
-          <SessionProvider>{children}</SessionProvider>
-        </ThemeProvider>
-      </body>
-    </html>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+        </body>
+      </html>
+    </CustomSessionProvider>
   );
 }

@@ -22,9 +22,10 @@ function RechargeContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
-  const [showWxQr, setShowWxQr] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [currentOrderId, setCurrentOrderId] = useState('');
+  const [qrPaymentMethod, setQrPaymentMethod] = useState<'alipay' | 'wechat'>('alipay');
 
   useEffect(() => {
     if (session?.user) {
@@ -42,13 +43,13 @@ function RechargeContent() {
   // 轮询订单状态
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (showWxQr && currentOrderId) {
+    if (showQrModal && currentOrderId) {
       timer = setInterval(async () => {
         try {
           const res = await fetch(`/api/task/order-status?orderId=${currentOrderId}`);
           const data = await res.json();
           if (data.status === 'completed') {
-            setShowWxQr(false);
+            setShowQrModal(false);
             router.push(`/recharge/success?orderId=${currentOrderId}`);
           }
         } catch (err) {
@@ -57,7 +58,7 @@ function RechargeContent() {
       }, 3000);
     }
     return () => clearInterval(timer);
-  }, [showWxQr, currentOrderId, router]);
+  }, [showQrModal, currentOrderId, router]);
 
   const handleCheckout = async () => {
     if (!selectedPlan) {
@@ -87,23 +88,19 @@ function RechargeContent() {
         throw new Error(data.error || '支付失败');
       }
 
-      if (paymentMethod === 'alipay' && data.url) {
-        // 支付宝：直接跳转或提交表单
-        // 如果返回的是 HTML 表单，我们需要将其渲染并提交
-        if (data.url.includes('<form')) {
-          const div = document.createElement('div');
-          div.innerHTML = data.url;
-          document.body.appendChild(div);
-          const form = div.querySelector('form');
-          if (form) form.submit();
-        } else {
-          window.location.href = data.url;
-        }
+      if (paymentMethod === 'alipay' && data.qrCode) {
+        // 支付宝：显示二维码弹窗
+        setQrCodeUrl(data.qrCode);
+        setCurrentOrderId(data.orderId);
+        setQrPaymentMethod('alipay');
+        setShowQrModal(true);
+        setLoading(false);
       } else if (paymentMethod === 'wechat' && data.qrCode) {
         // 微信：显示二维码弹窗
         setQrCodeUrl(data.qrCode);
         setCurrentOrderId(data.orderId);
-        setShowWxQr(true);
+        setQrPaymentMethod('wechat');
+        setShowQrModal(true);
         setLoading(false);
       } else {
         throw new Error('支付请求异常');
@@ -251,25 +248,29 @@ function RechargeContent() {
         </div>
       </main>
 
-      {/* 微信支付二维码弹窗 */}
-      {showWxQr && (
+      {/* 支付二维码弹窗 */}
+      {showQrModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-300">
             <div className="text-center">
-              <h3 className="text-xl font-bold mb-2">微信扫码支付</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">请使用微信扫描下方二维码完成支付</p>
+              <h3 className="text-xl font-bold mb-2">{qrPaymentMethod === 'alipay' ? '支付宝扫码支付' : '微信扫码支付'}</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
+                请使用{qrPaymentMethod === 'alipay' ? '支付宝' : '微信'}扫描下方二维码完成支付
+              </p>
               
               <div className="bg-white p-4 rounded-2xl inline-block shadow-inner mb-6">
                 <QRCodeSVG value={qrCodeUrl} size={200} />
               </div>
 
               <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-center gap-2 text-sm text-blue-500 animate-pulse">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <div className={`flex items-center justify-center gap-2 text-sm animate-pulse ${
+                  qrPaymentMethod === 'alipay' ? 'text-blue-500' : 'text-green-500'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${qrPaymentMethod === 'alipay' ? 'bg-blue-500' : 'bg-green-500'}`}></div>
                   等待支付中...
                 </div>
                 <button
-                  onClick={() => setShowWxQr(false)}
+                  onClick={() => setShowQrModal(false)}
                   className="w-full py-3 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
                 >
                   取消支付

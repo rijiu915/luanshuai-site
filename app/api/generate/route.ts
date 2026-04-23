@@ -1,13 +1,10 @@
 // app/api/generate/route.ts
 import { NextRequest } from 'next/server';
-import { getServerSession } from 'next-auth';
-// 改为从 lib 导入
-import { authOptions } from "@/lib/auth-options";
-// 而不是从 route.ts 导入
+import { auth } from "@/auth";
 import { prisma } from '@/lib/prisma';
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user?.email) {
     return Response.json({ code: 401, msg: 'Please login first' }, { status: 401 });
   }
@@ -96,20 +93,30 @@ export async function POST(req: NextRequest) {
 
   const callBackUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/callback`;
 
-  // 构建基础请求体
-  const baseBody: any = {
-    prompt,
-    numImages: 1,
-    type: finalType,
-    ...(isProModel ? { aspectRatio } : { image_size: aspectRatio }), // 动态调整字段名
-    ...(imageUrls?.length > 0 ? { imageUrls } : {}),
-    callBackUrl,
-  };
-
-  // 根据模型类型构建最终请求体
-  const body = isProModel
-    ? { ...baseBody, resolution: resolution || '2K' } // Pro 模型添加分辨率参数
-    : baseBody; // 标准模型不需要额外参数
+  // 根据模型类型构建不同的请求体
+  let body: any;
+  
+  if (isProModel) {
+    // Pro 模型请求体
+    body = {
+      prompt,
+      type: finalType,
+      aspectRatio,
+      resolution: resolution || '2K',
+      callBackUrl,
+      ...(imageUrls?.length > 0 ? { imageUrls } : {}),
+    };
+  } else {
+    // 标准模型请求体
+    body = {
+      prompt,
+      type: finalType,
+      numImages: 1,
+      image_size: aspectRatio,
+      callBackUrl,
+      ...(imageUrls?.length > 0 ? { imageUrls } : {}),
+    };
+  }
 
   console.log('Calling NanoBanana API with:', { apiUrl, body });
 
@@ -129,7 +136,24 @@ export async function POST(req: NextRequest) {
     });
 
     clearTimeout(timeoutId);
-    const data = await res.json();
+    
+    // 获取原始响应文本
+    const responseText = await res.text();
+    console.log('NanoBanana API raw response:', responseText);
+    
+    // 尝试解析 JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse API response as JSON:', parseError);
+      return Response.json({ 
+        code: 500, 
+        msg: 'Invalid response from NanoBanana API',
+        details: responseText.substring(0, 500)
+      }, { status: 500 });
+    }
+    
     console.log('NanoBanana API response:', data);
 
     // 透传 API 错误

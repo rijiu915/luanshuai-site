@@ -1,7 +1,6 @@
 // app/api/generate-pro/route.ts
 import { NextRequest } from "next/server";
-import { getServerSession } from 'next-auth';
-import { authOptions } from "@/lib/auth-options";
+import { auth } from "@/auth";
 import { prisma } from '@/lib/prisma';
 
 const API_KEY = process.env.NANOBANANA_API_KEY;
@@ -12,7 +11,7 @@ if (!API_KEY) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user?.email) {
     return Response.json({ code: 401, msg: 'Please login first' }, { status: 401 });
   }

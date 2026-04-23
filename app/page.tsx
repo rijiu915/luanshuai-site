@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect,useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -9,6 +9,64 @@ import { useSession, signOut } from 'next-auth/react';
 import { Navbar } from '@/components/navbar';
 import { TemplateSelector } from '@/components/template-selector';
 import { type Template } from '@/lib/templates';
+
+// 上传图片项组件 - 支持放大查看和编辑
+interface UploadedImageItemProps {
+  file: File;
+  fileUrl: string;
+  onPreview: (url: string) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+const UploadedImageItem = memo(function UploadedImageItem({ file, fileUrl, onPreview, onEdit, onDelete }: UploadedImageItemProps) {
+  return (
+    <div className="relative group aspect-square rounded-lg overflow-hidden cursor-pointer">
+      <Image
+        src={fileUrl}
+        alt={file.name}
+        width={200}
+        height={200}
+        className="w-full h-full object-cover"
+        unoptimized
+        onClick={() => onPreview(fileUrl)}
+      />
+      {/* 悬停遮罩层 */}
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onPreview(fileUrl);
+          }}
+          className="bg-white/20 hover:bg-white/30 backdrop-blur-md p-2 rounded-full border border-white/40 transition-all hover:scale-110"
+          title="放大查看"
+        >
+          <Maximize2 className="w-4 h-4 text-white" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          className="bg-white/20 hover:bg-white/30 backdrop-blur-md p-2 rounded-full border border-white/40 transition-all hover:scale-110"
+          title="编辑图片"
+        >
+          <Pencil className="w-4 h-4 text-white" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="bg-red-500/80 hover:bg-red-600 backdrop-blur-md p-2 rounded-full border border-white/40 transition-all hover:scale-110"
+          title="删除"
+        >
+          <X className="w-4 h-4 text-white" />
+        </button>
+      </div>
+    </div>
+  );
+});
 
 export default function HomePage() {
 
@@ -42,15 +100,25 @@ const fetchBalance = useCallback(async () => {
 
 const [showDropdown, setShowDropdown] = useState(false);
 
-    const { data: session } = useSession();
+    const { data: session, status: sessionStatus } = useSession();
     const [prompt, setPrompt] = useState('');
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
     const [aspectRatio, setAspectRatio] = useState('16:9');
     const [adaptiveRatio, setAdaptiveRatio] = useState<string | null>(null);
     const [useAdaptive, setUseAdaptive] = useState(false);
     const [resolution, setResolution] = useState<'1K' | '2K' | '4K'>('2K');
-    const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+    const [uploadedFiles, setUploadedFiles] = useState<{ file: File; previewUrl: string }[]>([]);
     const [isZoomed, setIsZoomed] = useState(false);
+    const [model, setModel] = useState<'nano-banana' | 'nano-banana-pro'>('nano-banana');
+
+    // 清理预览 URL
+    useEffect(() => {
+      return () => {
+        uploadedFiles.forEach(({ previewUrl }) => {
+          URL.revokeObjectURL(previewUrl);
+        });
+      };
+    }, []);
 
       // Restore edited image (or original) when coming back from editor
       useEffect(() => {
@@ -65,14 +133,23 @@ const [showDropdown, setShowDropdown] = useState(false);
             // 检查 URL 类型
             if (url.startsWith('data:')) {
               console.log('Processing Base64 data URL...');
-              // 使用 URL.createObjectURL 直接从 Base64 数据创建 blob
-              const response = await fetch(url);
-              if (!response.ok) {
-                console.error('Fetch failed with status:', response.status, response.statusText);
-                throw new Error(`Fetch failed: ${response.status} ${response.statusText}`);
+              // 直接从 data URL 解析出 MIME 类型和 base64 数据
+              const matches = url.match(/^data:([^;]+);base64,(.+)$/);
+              if (!matches) {
+                throw new Error('Invalid data URL format');
               }
-              const blob = await response.blob();
-              console.log('Blob fetched from Base64, size:', blob.size, 'type:', blob.type);
+              const mimeType = matches[1];
+              const base64Data = matches[2];
+              
+              // 将 base64 转换为二进制数据
+              const binaryString = atob(base64Data);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              const blob = new Blob([bytes], { type: mimeType });
+              console.log('Blob created from Base64, size:', blob.size, 'type:', blob.type);
+              
               if (cancelled) {
                 console.log('Operation cancelled');
                 return;
@@ -81,11 +158,10 @@ const [showDropdown, setShowDropdown] = useState(false);
                 console.error('Blob is empty!');
                 throw new Error('Blob is empty');
               }
-              file = new File([blob], filename, { type: blob.type || 'image/png' });
-              console.log('File created from Base64:', file.name, file.size, file.type, 'lastModified:', file.lastModified);
+              file = new File([blob], filename, { type: mimeType || 'image/jpeg' });
+              console.log('File created from Base64:', file.name, file.size, file.type);
             } else if (url.startsWith('blob:')) {
               console.log('Processing blob URL...');
-              // 对于 blob URL，我们需要先获取数据
               const response = await fetch(url);
               if (!response.ok) {
                 console.error('Fetch failed with status:', response.status, response.statusText);
@@ -97,687 +173,824 @@ const [showDropdown, setShowDropdown] = useState(false);
                 console.error('Blob is empty!');
                 throw new Error('Blob is empty');
               }
-              file = new File([blob], filename, { type: blob.type || 'image/png' });
-              console.log('File created from blob URL:', file.name, file.size, file.type, 'lastModified:', file.lastModified);
+              file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
             } else {
-              console.error('Unsupported URL type:', url.substring(0, 50) + '...');
-              throw new Error('Unsupported URL type');
-            }
-
-            // 只有在成功创建 file 对象后才更新 uploadedFiles
-            if (file) {
-              setUploadedFiles((prev) => {
-                console.log('Setting uploadedFiles, previous length:', prev.length, 'files:', prev.map(f => f.name));
-                const next = [...prev];
-
-                if (isEdited) {
-                  // 如果是编辑后的图片，添加到数组中而不是替换
-                  console.log('Adding edited image as new file:', file.name);
-                  next.push(file);
-                } else {
-                  // 如果不是编辑后的图片，保持原有逻辑（替换第一个或添加新文件）
-                  if (next.length > 0) {
-                    console.log('Replacing first file:', next[0].name);
-                    next[0] = file;
-                  } else {
-                    console.log('Adding new file to empty array');
-                    next.push(file);
-                  }
-                }
-
-                console.log('New uploadedFiles length:', next.length, 'files:', next.map(f => f.name));
-
-                // 显示成功消息给用户
-                setTimeout(() => {
-                  console.log('Image restored successfully! New file:', file.name);
-                }, 0);
-
-                return next;
-              });
-              console.log('setUploadedFiles called');
-            } else {
-              console.error('File object is not available, skipping upload');
-            }
-
-          } catch (err: unknown) {
-            console.error('Failed to restore image:', err);
-            alert(`恢复图片失败: ${err instanceof Error ? err.message : String(err)}`);
-          } finally {
-            // blob: URLs can be safely revoked after we have copied into a File
-            if (url.startsWith('blob:')) {
-              console.log('Revoking blob URL:', url.substring(0, 30) + '...');
-              try {
-                URL.revokeObjectURL(url);
-                console.log('Blob URL revoked successfully');
-              } catch (revokeErr) {
-                console.warn('Failed to revoke blob URL:', revokeErr);
+              console.log('Processing regular URL...');
+              const response = await fetch(url);
+              if (!response.ok) {
+                throw new Error(`Fetch failed: ${response.status} ${response.statusText}`);
               }
+              const blob = await response.blob();
+              file = new File([blob], filename, { type: blob.type });
+            }
+
+            if (cancelled || !file) {
+              console.log('Operation cancelled or file is null');
+              return;
+            }
+
+            console.log('Setting first upload:', file.name, file.size);
+            // 直接使用 File 创建预览 URL
+            const previewUrl = URL.createObjectURL(file);
+            setUploadedFiles([{ file, previewUrl }]);
+          } catch (err) {
+            console.error('Failed to set first upload from URL:', err);
+            if (err instanceof Error) {
+              console.error('Error name:', err.name, 'message:', err.message);
             }
           }
         };
 
-        const checkEditorReturn = async () => {
-          console.log('checkEditorReturn called');
-          const edited = sessionStorage.getItem('editedImage');
-          console.log('sessionStorage editedImage:', edited ? 'exists' : 'null', 'value:', edited ? edited.substring(0, 50) + '...' : 'null');
+        const checkSessionStorage = () => {
+          try {
+            const editedImage = sessionStorage.getItem('editedImage');
+            console.log('Checking sessionStorage for editedImage:', editedImage ? 'found (' + Math.round((editedImage?.length || 0) / 1024) + ' KB)' : 'not found');
 
-          if (edited) {
-            console.log('Found edited image in sessionStorage, processing...');
-            sessionStorage.removeItem('editedImage');
-            console.log('Removed editedImage from sessionStorage');
-            console.log('Processing edited image URL:', edited.substring(0, 50) + '...');
-            await setFirstUploadFromUrl(edited, `edited-${Date.now()}.png`, true);
-            console.log('setFirstUploadFromUrl completed');
-          } else {
-            console.log('No edited image found in sessionStorage');
-            // 如果从编辑器返回但没有编辑图片，恢复原始图片
-            const sourceImage = sessionStorage.getItem('editorSourceImage');
-            console.log('Checking editorSourceImage:', sourceImage ? 'exists' : 'null', 'value:', sourceImage ? sourceImage.substring(0, 50) + '...' : 'null');
-            if (sourceImage && uploadedFiles.length === 0) {
-              console.log('Restoring original image from editorSourceImage');
-              await setFirstUploadFromUrl(sourceImage, `reference-${Date.now()}.png`);
-              // 清理editorSourceImage，因为已经恢复了
-              sessionStorage.removeItem('editorSourceImage');
+            if (editedImage) {
+              console.log('Found edited image in sessionStorage, processing...');
+              setFirstUploadFromUrl(editedImage, 'edited-image.jpg', true);
+              sessionStorage.removeItem('editedImage');
+            } else {
+              console.log('No edited image found');
             }
+          } catch (err) {
+            console.error('Failed to access sessionStorage:', err);
           }
         };
 
-        void checkEditorReturn();
-        const onFocus = () => void checkEditorReturn();
-        window.addEventListener('focus', onFocus);
+        checkSessionStorage();
+
         return () => {
           cancelled = true;
-          window.removeEventListener('focus', onFocus);
         };
-      }, [uploadedFiles.length]); // 依赖uploadedFiles.length，当图片变化时检查
+      }, []);
 
-      // ========== 检测第一张图的比例 ==========
-    useEffect(() => {
-      if (uploadedFiles.length > 0) {
-        const file = uploadedFiles[0];
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new (window as any).Image();
-          img.onload = () => {
-            setAdaptiveRatio(`${img.width}:${img.height}`);
-          };
-          img.src = e.target?.result as string;
-        };
-        reader.readAsDataURL(file);
-      } else {
-        setAdaptiveRatio(null);
-        setUseAdaptive(false);
-      }
-    }, [uploadedFiles]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const dropZoneRef = useRef<HTMLDivElement>(null);
 
-    const downloadImage = async (url: string) => {
-      try {
-        const proxyUrl = `/api/download?url=${encodeURIComponent(url)}`;
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error('Download failed');
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = `lstwin-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-      } catch (err) {
-        console.error('Download failed:', err);
-        window.open(url, '_blank');
-      }
-    };
-
-  const [model, setModel] = useState<'nano-banana' | 'nano-banana-pro'>('nano-banana');
-  const [vipLevel, setVipLevel] = useState<string>('FREE');
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [pageStatus, setPageStatus] = useState<'idle' | 'submitting' | 'polling' | 'success' | 'error'>('idle');
-
-  // ========== 余额和VIP等级获取 ==========
-  const fetchUserData = useCallback(async () => {
-    if (!session?.user) return;
-    try {
-      const res = await fetch('/api/user/balance');
-      const data = await res.json();
-      if (data.balance !== undefined) {
-        setVipLevel(data.vipLevel || 'FREE');
-      }
-    } catch (err) {
-      console.error('Failed to fetch user data', err);
-    }
-  }, [session]);
-
-  useEffect(() => {
-    fetchUserData();
-  }, [fetchUserData]);
-
-  // ========== 文件处理（不变）==========
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (uploadedFiles.length + files.length > 8) {
-      alert('最多只能上传 8 张图片');
-      return;
-    }
-
-    const validFiles: File[] = [];
-    for (const file of files) {
-      if (!file.type.startsWith('image/')) {
-        alert(`"${file.name}" 不是有效图片`);
-        continue;
-      }
-      if (file.size > 20 * 1024 * 1024) {
-        alert(`"${file.name}" 超过 20MB 限制`);
-        continue;
-      }
-      validFiles.push(file);
-    }
-
-    if (validFiles.length > 0) {
-      setUploadedFiles((prev) => [...prev, ...validFiles].slice(0, 8));
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const triggerFileSelect = () => {
-    fileInputRef.current?.click();
-  };
-
-  // ========== 上传图片（不变）==========
-  const uploadImages = async (files: File[]): Promise<string[]> => {
-    const urls: string[] = [];
-    const uploadPromises = files.map(async (file) => {
-      const formData = new FormData();
-      formData.append('image', file);
-      const res = await fetch('/api/upload-temp', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error(`上传失败: ${file.name}`);
-      const data = await res.json();
-      return data.url;
-    });
-
-    try {
-      return await Promise.all(uploadPromises);
-    } catch (err) {
-      console.error('批量上传失败:', err);
-      throw err;
-    }
-  };
-
-  // ========== 轮询（不变）==========
-  const pollTaskStatus = (taskId: string) => {
-    let pollCount = 0;
-    const MAX_POLL = 220;
-    const interval = setInterval(async () => {
-      pollCount++;
-      try {
-        const res = await fetch(`/api/task/${taskId}`);
-        const data = await res.json();
-        if (data.code === 200 && data.data) {
-          const { successFlag, response } = data.data;
-          if (successFlag === 1 && response?.resultImageUrl) {
-            clearInterval(interval);
-            setImageUrl(response.resultImageUrl);
-            setPageStatus('success');
-            return;
-          }
-          if (successFlag === 2 || successFlag === 3) {
-            clearInterval(interval);
-            setPageStatus('error');
-            alert('生成失败，请重试');
-            return;
-          }
-        }
-        if (pollCount >= MAX_POLL) {
-          clearInterval(interval);
-          setPageStatus('error');
-          alert('生成超时，请重试');
-        }
-      } catch (err) {
-        clearInterval(interval);
-        setPageStatus('error');
-        console.error('Polling error:', err);
-      }
-    }, 2000);
-  };
-
-    // ========== 生成逻辑（关键修改）==========
-    const handleGenerate = async () => {
-      // 如果没有选模板且没有输入内容，报错
-      if (!selectedTemplate && !prompt.trim()) {
-        alert('请输入提示词或选择一个功能模板');
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      console.log('Files selected:', files.map(f => `${f.name} (${f.size} bytes)`));
+      if (files.length === 0) {
+        console.warn('No files selected');
         return;
       }
-  
-      setPageStatus('submitting');
-      let imageUrls: string[] = [];
-  
-      if (uploadedFiles.length > 0) {
-        try {
-          imageUrls = await uploadImages(uploadedFiles);
-        } catch (err) {
-          setPageStatus('error');
-          alert('图片上传失败，请重试');
-          return;
-        }
+      // 创建包含预览 URL 的文件对象
+      const filesWithUrls = files.map(file => ({
+        file,
+        previewUrl: URL.createObjectURL(file)
+      }));
+      setUploadedFiles(filesWithUrls);
+      // 检测第一张图片的宽高比
+      if (files[0]) {
+        detectImageRatio(files[0]);
       }
-  
-      const type = imageUrls.length > 0 ? 'IMAGETOIAMGE' : 'TEXTTOIAMGE';
-  
-      try {
-        // 合并提示词：模板提示词 + 用户补充说明
-        const finalPrompt = selectedTemplate 
-          ? `${selectedTemplate.prompt}${prompt.trim() ? `，${prompt.trim()}` : ''}`
-          : prompt.trim();
-
-          const requestBody: any = {
-            prompt: finalPrompt,
-            numImages: 1,
-            type,
-            aspectRatio: useAdaptive && adaptiveRatio ? adaptiveRatio : aspectRatio,
-            imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
-            model,
-            callBackUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/api/callback`,
-          };
-
-
-      // ✅ 只有在选择 'nano-banana-pro' 时才添加 resolution 字段
-      if (model === 'nano-banana-pro') {
-        requestBody.resolution = resolution;
-      }
-
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.code === 200 && data.data?.taskId) {
-        setPageStatus('polling');
-        pollTaskStatus(data.data.taskId);
-        fetchBalance(); // 刷新余额
-      } else {
-        setPageStatus('error');
-        alert(data.msg || '提交失败');
-      }
-    } catch (err) {
-      setPageStatus('error');
-      alert('网络错误，请检查控制台');
-      console.error(err);
-    }
-  };
-
-    const handleLogout = async () => {
-      await signOut({ redirect: false });
-      setShowDropdown(false);
-      window.location.reload();
     };
 
-    const basePoints = model === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60);
-    let currentPoints = basePoints;
-    if (vipLevel === 'VIP') {
-      currentPoints = Math.max(0, basePoints - 3);
-    } else if (vipLevel === 'SVIP') {
-      currentPoints = Math.max(0, basePoints - 5);
-    }
+    const handleDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const files = Array.from(e.dataTransfer.files);
+      console.log('Files dropped:', files.map(f => `${f.name} (${f.size} bytes)`));
+      if (files.length === 0) {
+        console.warn('No files dropped');
+        return;
+      }
+      // 创建包含预览 URL 的文件对象
+      const filesWithUrls = files.map(file => ({
+        file,
+        previewUrl: URL.createObjectURL(file)
+      }));
+      setUploadedFiles(filesWithUrls);
+      // 检测第一张图片的宽高比
+      if (files[0]) {
+        detectImageRatio(files[0]);
+      }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleDragEnter = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    // 检测图片宽高比
+    const detectImageRatio = (file: File) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const ratio = img.width / img.height;
+        let ratioString: string;
+        
+        // 根据比例判断常见的宽高比
+        if (ratio > 1.7) ratioString = '16:9';
+        else if (ratio > 1.3) ratioString = '4:3';
+        else if (ratio > 0.9 && ratio < 1.1) ratioString = '1:1';
+        else if (ratio < 0.6) ratioString = '9:16';
+        else ratioString = '3:4';
+        
+        setAdaptiveRatio(`${img.width}:${img.height}`);
+        setUseAdaptive(true);
+        setAspectRatio(ratioString);
+        console.log(`Detected image ratio: ${img.width}x${img.height} (${ratioString})`);
+      };
+      img.src = URL.createObjectURL(file);
+    };
+
+    const [pageStatus, setPageStatus] = useState<'idle' | 'submitting' | 'polling'>('idle');
+    const [taskId, setTaskId] = useState<string | null>(null);
+    const [generatedImages, setGeneratedImages] = useState<any[]>([]);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+    // 上传图片到临时存储获取可访问URL
+    const uploadImages = async (files: File[]): Promise<string[]> => {
+      const uploadPromises = files.map(async (file) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        const res = await fetch('/api/upload-temp', { method: 'POST', body: formData });
+        if (!res.ok) throw new Error(`上传失败: ${file.name}`);
+        const data = await res.json();
+        return data.url;
+      });
+      return Promise.all(uploadPromises);
+    };
+
+    const handleGenerate = async () => {
+      if (!prompt && !selectedTemplate) {
+        console.warn('Generate called without prompt or template');
+        alert('请输入提示词或选择模板');
+        return;
+      }
+
+      if (!session?.user?.email) {
+        console.warn('User not logged in');
+        alert('请先登录');
+        router.push('/login');
+        return;
+      }
+
+      setPageStatus('submitting');
+
+      try {
+        // 先上传图片获取可访问URL
+        let imageUrls: string[] = [];
+        if (uploadedFiles.length > 0) {
+          try {
+            const files = uploadedFiles.map(item => item.file);
+            imageUrls = await uploadImages(files);
+          } catch (err) {
+            setPageStatus('idle');
+            alert('图片上传失败，请重试');
+            return;
+          }
+        }
+
+        // 构建最终prompt：如果有模板，使用模板的完整prompt + 用户的补充内容
+        let finalPrompt = prompt;
+        if (selectedTemplate) {
+          finalPrompt = selectedTemplate.prompt;
+          if (prompt.trim()) {
+            finalPrompt += `，${prompt.trim()}`;
+          }
+        }
+
+        const type = imageUrls.length > 0 ? 'IMAGETOIAMGE' : 'TEXTTOIAMGE';
+
+        const body: any = {
+          prompt: finalPrompt,
+          type,
+          aspectRatio: useAdaptive && adaptiveRatio ? adaptiveRatio : aspectRatio,
+          model,
+          imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+        };
+
+        // 仅在 Pro 模式下添加 resolution
+        if (model === 'nano-banana-pro') {
+          body.resolution = resolution;
+        }
+
+        console.log('Calling generate API with:', {
+          prompt: body.prompt,
+          type: body.type,
+          aspectRatio: body.aspectRatio,
+          model: body.model,
+          resolution: body.resolution,
+          hasImages: imageUrls.length,
+        });
+
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        });
+
+        // 检查 HTTP 状态码
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('Generate API HTTP error:', res.status, errorText);
+          throw new Error(`服务器错误 (${res.status}): ${errorText || '未知错误'}`);
+        }
+
+        const data = await res.json();
+
+        if (data.code !== 200 && data.code !== 0) {
+          console.error('Generate API error:', data);
+          throw new Error(data.msg || data.error || '生成失败');
+        }
+
+        const generatedTaskId = data.data?.taskId || data.data?.[0]?.taskId || data.taskId;
+        console.log('Task ID:', generatedTaskId);
+
+        setTaskId(generatedTaskId);
+        setPageStatus('polling');
+
+        // Start polling
+        pollTaskStatus(generatedTaskId);
+      } catch (error: any) {
+        console.error('Generate error:', error);
+        alert(`生成失败: ${error.message}`);
+        setPageStatus('idle');
+      }
+    };
+
+    const pollTaskStatus = async (id: string) => {
+      console.log('Polling task status for ID:', id);
+      const maxAttempts = 120;
+      let attempts = 0;
+
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        console.log(`Poll attempt ${attempts}/${maxAttempts}`);
+
+        try {
+          const res = await fetch(`/api/task/${id}`);
+          const data = await res.json();
+
+          console.log('Task status response:', data);
+
+          // 解析 NanoBanana API 响应结构
+          // 文档: https://docs.nanobananaapi.ai/nanobanana-api/get-task-details
+          const apiCode = data.code;
+          const successFlag = data.data?.successFlag; // 0=生成中, 1=成功, 2=创建失败, 3=生成失败
+          const resultImageUrl = data.data?.response?.resultImageUrl;
+          const errorMessage = data.data?.errorMessage;
+          
+          console.log('Parsed status:', { apiCode, successFlag, resultImageUrl, errorMessage });
+
+          // 判断任务状态
+          if (successFlag === 1 && resultImageUrl) {
+            // 任务成功完成
+            clearInterval(pollInterval);
+            console.log('Task completed with image:', resultImageUrl);
+            console.log('Setting generatedImages state...');
+            setPageStatus('idle');
+            setGeneratedImages([{ url: resultImageUrl }]);
+            console.log('generatedImages should now be updated');
+          } else if (successFlag === 2 || successFlag === 3) {
+            // 任务失败 (2=创建失败, 3=生成失败)
+            clearInterval(pollInterval);
+            console.error('Task failed:', errorMessage || data);
+            setPageStatus('idle');
+            alert(`生成失败: ${errorMessage || '请重试'}`);
+          } else if (attempts >= maxAttempts) {
+            // 轮询超时
+            clearInterval(pollInterval);
+            console.error('Polling timeout');
+            setPageStatus('idle');
+            alert('生成超时，请重试');
+          }
+          // successFlag === 0 或其他情况继续轮询
+        } catch (error) {
+          console.error('Polling error:', error);
+        }
+      }, 2000);
+    };
+
+    const renderGeneratedImages = () => {
+      if (generatedImages.length === 0) return null;
 
       return (
-        <div className="min-h-screen bg-background text-foreground">
-          <Navbar />
-
-          <main className="container mx-auto px-4 py-12 md:py-20">
-
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl md:text-5xl font-bold text-center mb-6">
-            用文字描述，生成概念图
-          </h1>
-            <p className="text-gray-500 dark:text-gray-400 text-center mb-10 max-w-2xl mx-auto">
-              支持文生图 & 图生图（上传参考图）
-            </p>
-
-                <TemplateSelector onSelect={(template) => {
-                  setSelectedTemplate(template);
-                  // 自动滚动到输入区域或聚焦
-                  window.scrollTo({ top: 400, behavior: 'smooth' });
-                }} />
-
-                <div className="relative min-h-[500px] border border-border rounded-xl bg-card-bg p-6">
-                
-                {selectedTemplate && (
-                  <div className="mb-6 animate-in slide-in-from-top-4 duration-300">
-                    <div className="flex items-center justify-between bg-blue-500/10 border border-blue-500/20 rounded-xl px-5 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-blue-500/30">
-                          <Image src={selectedTemplate.image} alt={selectedTemplate.name} fill className="object-cover" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-blue-500 font-bold">已应用: {selectedTemplate.name}</span>
-                            <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded font-bold uppercase">{selectedTemplate.badge}</span>
-                          </div>
-                          <p className="text-xs text-blue-500/70 mt-0.5">提示：模板内置专业提示词已隐藏，您可以继续在下方输入补充说明。</p>
-                        </div>
-                      </div>
-                      <button 
-                        onClick={() => setSelectedTemplate(null)}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all"
-                        title="移除模板"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold mb-4 text-foreground">生成结果</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {generatedImages.map((img, idx) => {
+              const imageUrl = img.url || img;
+              return (
+                <div key={idx} className="relative group rounded-lg overflow-hidden cursor-pointer">
+                  <Image
+                    src={imageUrl}
+                    alt={`Generated ${idx + 1}`}
+                    width={400}
+                    height={300}
+                    className="w-full h-auto object-cover"
+                    onClick={() => setPreviewImage(imageUrl)}
+                  />
+                  {/* 悬停遮罩层 */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 gap-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewImage(imageUrl);
+                      }}
+                      className="bg-white/20 hover:bg-white/30 backdrop-blur-md p-3 rounded-full border border-white/40 transition-all hover:scale-110"
+                    >
+                      <Maximize2 className="w-5 h-5 text-white" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // 下载图片
+                        const link = document.createElement('a');
+                        link.href = imageUrl;
+                        link.download = `generated-image-${idx + 1}.png`;
+                        link.target = '_blank';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                      className="bg-white/20 hover:bg-white/30 backdrop-blur-md p-3 rounded-full border border-white/40 transition-all hover:scale-110"
+                    >
+                      <Download className="w-5 h-5 text-white" />
+                    </button>
                   </div>
-                )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    };
 
-                {/* Prompt */}
-                <div className="mb-8">
+    return (
+      <>
+        <Navbar />
+
+        <main className="container mx-auto px-4 py-12 md:py-20">
+
+          <div className={`${generatedImages.length > 0 && generatedImages[0]?.url ? 'flex gap-6' : ''}`}>
+
+            {/* 左侧：编辑界面（生成后可滚动） */}
+            <div className={`${generatedImages.length > 0 && generatedImages[0]?.url ? 'w-96 flex-shrink-0 overflow-y-auto max-h-[calc(100vh-12rem)]' : ''}`}>
+
+            {/* Hero 区域 - 生成后隐藏 */}
+            {!(generatedImages.length > 0 && generatedImages[0]?.url) && (
+            <div className="text-center mb-12 animate-fade-up">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400 text-xs font-semibold mb-5 animate-fade-up">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                建筑概念图 AI 生成工具
+              </div>
+              <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-5 animate-fade-up-delay-1">
+                <span className="text-foreground">用文字描述</span>
+                <br />
+                <span className="gradient-text-blue">生成专业概念图</span>
+              </h1>
+              <p className="text-base md:text-lg text-muted-foreground mb-2 max-w-xl mx-auto animate-fade-up-delay-2">
+                支持文生图 & 图生图，30+ 专业建筑模板，覆盖效果图、分析图、立面图全工作流
+              </p>
+              <div className="flex items-center justify-center gap-4 mt-5 animate-fade-up-delay-3">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <svg className="w-3.5 h-3.5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                  标准版 15 积分/张
+                </div>
+                <div className="w-px h-3 bg-border" />
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <svg className="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                  Pro 最高 4K 超清
+                </div>
+                <div className="w-px h-3 bg-border" />
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <svg className="w-3.5 h-3.5 text-purple-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                  VIP 专属折扣
+                </div>
+              </div>
+            </div>
+            )}
+
+            {/* 模板选择 - 生成后保留 */}
+            <TemplateSelector
+              onSelect={(template) => {
+                setSelectedTemplate(template);
+                // 清空补充内容输入框，模板prompt不显示在前端
+                setPrompt('');
+              }}
+            />
+
+            {/* 操作面板 */}
+            <div className="relative min-h-[500px] border border-border rounded-2xl bg-card-bg p-6 md:p-8 shadow-sm">
+
+              {pageStatus === 'polling' && (
+                <div className="absolute inset-0 bg-background/80 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-10">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-lg font-medium text-foreground">正在生成图像...</p>
+                    <p className="text-sm text-muted-foreground">这可能需要 10-30 秒</p>
+                  </div>
+                </div>
+              )}
+
+              {/* 文件上传区域 */}
+              <div className="mb-6">
+                <label
+                  ref={dropZoneRef}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border rounded-lg hover:border-blue-500/50 transition-colors cursor-pointer bg-input-bg"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <Pencil className="w-10 h-10 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    <span className="text-blue-600 dark:text-blue-400 font-medium">点击上传</span> 或拖拽图片到这里
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">支持 PNG, JPG, WebP 格式</p>
+                </label>
+              </div>
+
+              {/* 已上传文件列表 */}
+              {uploadedFiles.length > 0 && (
+                <div className="mb-6">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      {selectedTemplate ? '补充说明' : '描述您的创作意图'}
-                    </label>
-                    {selectedTemplate && (
-                      <span className="text-[10px] text-blue-500 font-medium px-2 py-0.5 bg-blue-500/5 rounded-full border border-blue-500/10">
-                        双提示词合并发送
+                    <h4 className="text-sm font-medium text-foreground">已上传 {uploadedFiles.length} 张图片</h4>
+                    <button
+                      onClick={() => {
+                        setUploadedFiles([]);
+                        setUseAdaptive(false);
+                        setAdaptiveRatio(null);
+                      }}
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      清空
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {uploadedFiles.map((item, idx) => (
+                      <UploadedImageItem
+                        key={`${item.file.name}-${idx}`}
+                        file={item.file}
+                        fileUrl={item.previewUrl}
+                        onPreview={(url) => setPreviewImage(url)}
+                        onEdit={() => editImage(item.file)}
+                        onDelete={() => {
+                          const newFiles = [...uploadedFiles];
+                          newFiles.splice(idx, 1);
+                          setUploadedFiles(newFiles);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 模板标记 */}
+              {selectedTemplate && (
+                <div className="mb-4 p-3 bg-blue-500/5 border border-blue-500/20 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500/20 to-indigo-500/20 border border-blue-500/20 flex items-center justify-center">
+                        <svg className="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">正在使用模板</p>
+                        <p className="text-sm font-semibold text-foreground">{selectedTemplate.name}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedTemplate(null);
+                        setPrompt('');
+                      }}
+                      className="p-1.5 hover:bg-blue-500/10 rounded-lg transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 提示词/补充内容输入 */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  {selectedTemplate ? '补充内容（可选）' : '提示词'}
+                </label>
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder={selectedTemplate 
+                    ? `请输入个性化补充说明（例如：调整材质颜色、修改环境光影等）...` 
+                    : "例如：一个现代风格的半透明玻璃艺术馆，周围环绕着茂密的森林，夕阳余晖..."}
+                  className="w-full h-32 p-4 bg-input-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/50 text-foreground placeholder-muted-foreground resize-none transition-all shadow-inner text-sm leading-relaxed"
+                />
+                {selectedTemplate && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    模板提示词将在后端自动应用，您可以在上方添加个性化补充说明
+                  </p>
+                )}
+              </div>
+
+              {/* 模型选择 */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium text-foreground">
+                    生成模型
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-sm font-medium transition-colors ${
+                      model === 'nano-banana' ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'
+                    }`}>
+                      标准版
+                    </span>
+                    <button
+                      onClick={() => setModel(model === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${
+                        model === 'nano-banana-pro' ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-out ${
+                          model === 'nano-banana-pro' ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                    <span className={`text-sm font-medium transition-colors ${
+                      model === 'nano-banana-pro' ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'
+                    }`}>
+                      Pro 专业版
+                    </span>
+                    {model === 'nano-banana-pro' && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white font-bold uppercase">
+                        PRO
                       </span>
                     )}
                   </div>
-                  <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder={selectedTemplate ? `请输入针对“${selectedTemplate.name}”的个性化补充说明（例如：调整材质颜色、修改环境光影等）...` : "例如：一个现代风格的半透明玻璃艺术馆，周围环绕着茂密的森林，夕阳余晖..."}
-                    className="w-full h-32 p-4 bg-input-bg border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-foreground placeholder-gray-500 resize-none transition-all shadow-inner"
-                  />
                 </div>
-  
-              {/* 图片上传 */}
-              <div className="mb-8">
+                <p className="text-xs text-muted-foreground">
+                  {model === 'nano-banana' 
+                    ? '标准版：15 积分/张，适合快速预览' 
+                    : 'Pro 专业版：60-90 积分/张，支持 2K/4K 超清输出'}
+                </p>
+              </div>
+
+              {/* 宽高比选择 */}
+              <div className="mb-6">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {selectedTemplate ? '参考图上传' : '参考图 (可选)'}
+                  <label className="block text-sm font-medium text-foreground">
+                    宽高比
                   </label>
-                  {selectedTemplate && (
-                    <span className="text-[10px] text-orange-500 font-medium px-2 py-0.5 bg-orange-500/5 rounded-full border border-orange-500/10">
-                      建议上传以获得更精准效果
-                    </span>
-                  )}
-                </div>
-                <div className={`flex flex-wrap gap-3 p-6 rounded-xl border-2 border-dashed transition-all duration-300 ${selectedTemplate ? 'border-blue-500 bg-blue-500/5 shadow-lg shadow-blue-500/5' : 'border-border hover:border-blue-500/30 bg-input-bg/40'}`}>
-                  {uploadedFiles.map((file, index) => (
-                    <div key={index} className="relative w-20 h-20 group">
-                      <Image
-                        src={URL.createObjectURL(file)}
-                        alt={`preview-${index}`}
-                        width={80}
-                        height={80}
-                        className="object-cover rounded-lg border border-border shadow-sm group-hover:scale-105 transition-transform"
-                        unoptimized
-                      />
-                      <button
-                        onClick={() => removeFile(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm shadow-md hover:bg-red-600 transition-colors"
-                      >
-                        ×
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); editImage(file); }}
-                        className="absolute -bottom-2 -right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md hover:bg-blue-600 transition-colors opacity-0 group-hover:opacity-100"
-                        title="编辑图片"
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                  {uploadedFiles.length < 8 && (
+                  {adaptiveRatio && (
                     <button
-                      onClick={triggerFileSelect}
-                      className={`w-20 h-20 border-2 border-dashed rounded-lg flex flex-col items-center justify-center transition-all ${selectedTemplate ? 'border-blue-400 text-blue-500 bg-blue-500/5 hover:bg-blue-500/10' : 'border-border text-gray-400 hover:border-blue-500 hover:text-blue-500'}`}
+                      onClick={() => setUseAdaptive(!useAdaptive)}
+                      className={`text-xs font-medium px-2 py-1 rounded-lg border transition-all ${
+                        useAdaptive
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-input-bg text-muted-foreground border-border hover:border-blue-500/50'
+                      }`}
                     >
-                      <span className="text-2xl mb-1">+</span>
-                      <span className="text-[10px] font-bold">上传</span>
+                      自适应 ({adaptiveRatio})
                     </button>
                   )}
-                  {uploadedFiles.length === 0 && selectedTemplate && (
-                    <div className="flex flex-col justify-center ml-2">
-                      <p className="text-sm text-blue-500/80 font-medium">点击上方区域上传参考图</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">上传参考图能让 AI 更准确地理解空间关系</p>
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                  />
-                  </div>
                 </div>
-  
-                    {/* 尺寸比例选择 */}
-                    <div className="mb-8">
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          尺寸比例
-                        </label>
-                        <span className="text-[10px] text-gray-400 font-medium px-2 py-0.5 bg-gray-500/5 rounded-full border border-border">
-                          决定图像构图
-                        </span>
-                      </div>
-                        <div className="flex flex-wrap gap-2">
-                          {/* 自适应选项 */}
-                          <button
-                            onClick={() => {
-                              if (adaptiveRatio) {
-                                setUseAdaptive(true);
-                                setAspectRatio('adaptive');
-                              } else {
-                                alert('请先上传参考图以使用自适应比例');
-                              }
-                            }}
-                            className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all duration-200 ${
-                              useAdaptive
-                                ? 'bg-orange-600 text-white border-orange-600 shadow-lg shadow-orange-500/20'
-                                : 'bg-input-bg border-border text-gray-500 hover:border-orange-500/50 hover:text-orange-500'
-                            }`}
-                          >
-                            自适应 {adaptiveRatio ? `(${adaptiveRatio})` : '(上传图片后开启)'}
-                          </button>
-
-                          {[
-                            { label: '横屏 16:9', value: '16:9' },
-                            { label: '标准 4:3', value: '4:3' },
-                            { label: '正方形 1:1', value: '1:1' },
-                            { label: '人像 3:4', value: '3:4' },
-                            { label: '竖屏 9:16', value: '9:16' },
-                          ].map((ratio) => (
-                            <button
-                              key={ratio.value}
-                              onClick={() => {
-                                setAspectRatio(ratio.value);
-                                setUseAdaptive(false);
-                              }}
-                              className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all duration-200 ${
-                                aspectRatio === ratio.value && !useAdaptive
-                                  ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20'
-                                  : 'bg-input-bg border-border text-gray-500 hover:border-blue-500/50 hover:text-orange-500'
-                              }`}
-                            >
-                              {ratio.label}
-                            </button>
-                          ))}
-                        </div>
-
-                    </div>
-  
-                    {/* 底部：左模型选择，右生成按钮 */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border">
-                    <div className="flex flex-wrap items-center gap-4">
-                      {/* 模型选择开关 */}
-                      <div className="flex items-center gap-4 bg-input-bg p-3 rounded-xl border border-border/50">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-sm font-bold transition-colors ${model === 'nano-banana-pro' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                              {model === 'nano-banana-pro' ? 'Pro 专业版' : '标准版'}
-                            </span>
-                            {model === 'nano-banana-pro' && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white font-black uppercase tracking-wider">
-                                PRO
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setModel(model === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none shadow-inner ${
-                            model === 'nano-banana-pro' ? 'bg-blue-600 shadow-blue-900/20' : 'bg-gray-300 dark:bg-gray-600'
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-out ${
-                              model === 'nano-banana-pro' ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* 分辨率选择 - 仅在 Pro 模式显示 */}
-                      {model === 'nano-banana-pro' && (
-                        <div className="flex items-center gap-2 bg-input-bg p-2 rounded-xl border border-border/50 animate-in slide-in-from-left-2 duration-300">
-                          {(['1K', '2K', '4K'] as const).map((res) => (
-                            <button
-                              key={res}
-                              onClick={() => setResolution(res)}
-                              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                resolution === res
-                                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                                  : 'text-gray-500 hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800'
-                              }`}
-                            >
-                              {res}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2">
-                    <div className="flex flex-col items-end">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        本次生成所需积分: <span className="text-orange-400 font-bold">{currentPoints}</span>
-                      </span>
-                      {vipLevel !== 'FREE' && (
-                        <span className="text-[11px] text-green-500 font-medium">
-                          {vipLevel} 专享优惠 -{vipLevel === 'SVIP' ? '5' : '3'} 积分
-                        </span>
-                      )}
-                      {vipLevel === 'FREE' && (
-                        <span className="text-[11px] text-gray-400">
-                          VIP 减 3，SVIP 减 5
-                        </span>
-                      )}
-                    </div>
+                <div className="flex gap-3">
+                  {['16:9', '4:3', '1:1', '9:16', '3:4'].map((ratio) => (
                     <button
-
-                    onClick={handleGenerate}
-                    disabled={pageStatus === 'submitting' || pageStatus === 'polling'}
-                    className={`px-6 py-2 rounded-lg font-medium whitespace-nowrap text-white ${
-                      pageStatus === 'submitting' || pageStatus === 'polling'
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 hover:bg-blue-700'
-                    }`}
-                  >
-                    {pageStatus === 'submitting'
-                      ? '提交中...'
-                      : pageStatus === 'polling'
-                      ? '生成中...'
-                      : '生成图像'}
-                  </button>
+                      key={ratio}
+                      onClick={() => {
+                        setAspectRatio(ratio);
+                        setUseAdaptive(false);
+                      }}
+                      className={`px-4 py-2 rounded-lg border transition-all ${
+                        aspectRatio === ratio && !useAdaptive
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-blue-500/25'
+                          : 'bg-input-bg border-border text-foreground hover:border-blue-500/50'
+                      }`}
+                    >
+                      {ratio}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-
-              {/* 预览 */}
-              <div className="mt-8 flex justify-center items-start gap-4">
-                {pageStatus === 'success' && imageUrl ? (
-                  <>
-                    <button
-                      onClick={() => downloadImage(imageUrl)}
-                      className="flex flex-col items-center gap-2 p-3 bg-white/10 hover:bg-white/20 border border-border rounded-xl transition-all group shrink-0"
-                      title="下载图像"
-                    >
-                      <Download className="w-6 h-6 text-blue-500 group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-bold text-gray-500">下载</span>
-                    </button>
-                    <div className="relative group cursor-zoom-in" onClick={() => setIsZoomed(true)}>
-                      <Image
-                        src={imageUrl}
-                        alt="Generated"
-                        width={800}
-                        height={800}
-                        className="rounded-lg shadow-lg max-w-full"
-                        unoptimized
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <div className="bg-white/30 backdrop-blur-md p-3 rounded-full border border-white/40">
-                          <Maximize2 className="w-6 h-6 text-white" />
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                ) : pageStatus === 'polling' ? (
-                  <div className="text-center py-10">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
-                    <p className="text-foreground">正在生成...</p>
+              {/* 分辨率选择 - 仅在 Pro 模式显示 */}
+              {model === 'nano-banana-pro' && (
+                <div className="mb-6 animate-in slide-in-from-top-2 duration-300">
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    分辨率
+                  </label>
+                  <div className="flex gap-3">
+                    {(['1K', '2K', '4K'] as const).map((res) => (
+                      <button
+                        key={res}
+                        onClick={() => setResolution(res)}
+                        className={`px-4 py-2 rounded-lg border transition-all ${
+                          resolution === res
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-purple-500/25'
+                            : 'bg-input-bg border-border text-foreground hover:border-purple-500/50'
+                        }`}
+                      >
+                        {res}
+                      </button>
+                    ))}
                   </div>
-                ) : (
-                  <div className="text-gray-400 py-10">点击"生成图像"开始创作</div>
-                )}
+                </div>
+              )}
+
+              {/* 生成按钮 */}
+              <div className="flex justify-center">
+                <button
+                  onClick={handleGenerate}
+                  disabled={pageStatus === 'submitting' || pageStatus === 'polling'}
+                  className={`btn-magnetic px-7 py-2.5 rounded-xl font-semibold whitespace-nowrap text-white text-sm shadow-lg transition-all ${
+                    pageStatus === 'submitting' || pageStatus === 'polling'
+                      ? 'bg-gray-400 cursor-not-allowed shadow-none'
+                      : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/25 animate-pulse-glow'
+                  }`}
+                >
+                  {pageStatus === 'submitting' ? '提交中...' : pageStatus === 'polling' ? '生成中...' : '开始生成'}
+                </button>
+              </div>
             </div>
 
-            {/* 灯箱预览 */}
-            {isZoomed && imageUrl && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
-                <button 
-                  onClick={() => setIsZoomed(false)}
-                  className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all z-10"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-                <div className="relative max-w-5xl max-h-[90vh] w-full h-full flex flex-col items-center justify-center gap-6">
-                  <Image
-                    src={imageUrl}
-                    alt="Zoomed"
-                    width={1600}
-                    height={1600}
-                    className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
-                    unoptimized
-                  />
-                  <button
-                    onClick={() => downloadImage(imageUrl)}
-                    className="flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-xl shadow-blue-500/20 transition-all hover:scale-105 active:scale-95"
-                  >
-                    <Download className="w-6 h-6" />
-                    立即下载高清图
-                  </button>
+            {/* 关闭左侧面板 */}
+            </div>
+
+            {/* 右侧：大图预览 */}
+            {generatedImages.length > 0 && generatedImages[0]?.url && (
+              <div className="flex-1 bg-card-bg border border-border rounded-2xl p-4 flex flex-col overflow-hidden min-h-[500px]">
+                <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                  <h3 className="text-lg font-semibold text-foreground">生成结果</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setPreviewImage(generatedImages[0].url)}
+                      className="px-4 py-2 text-sm bg-input-bg border border-border hover:border-blue-500/50 rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <Maximize2 className="w-4 h-4" />
+                      放大
+                    </button>
+                    <button
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = generatedImages[0].url;
+                        link.download = `效果图-${Date.now()}.png`;
+                        link.target = '_blank';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                      className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      下载
+                    </button>
+                    <button
+                      onClick={() => setGeneratedImages([])}
+                      className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-border hover:border-foreground/20 rounded-lg transition-colors"
+                    >
+                      返回
+                    </button>
+                  </div>
                 </div>
-                <div className="absolute inset-0 -z-10" onClick={() => setIsZoomed(false)} />
+                <div className="flex-1 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center p-4">
+                  <img
+                    src={generatedImages[0].url}
+                    alt="生成结果"
+                    className="max-w-full max-h-full object-contain"
+                    style={{ maxHeight: 'calc(100vh - 280px)', maxWidth: '100%' }}
+                    onError={(e) => {
+                      console.error('图片加载失败:', generatedImages[0].url);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                    onLoad={() => console.log('图片加载成功:', generatedImages[0].url)}
+                  />
+                </div>
               </div>
             )}
-          </div>
-        </div>
-      </main>
 
-      <footer className="py-6 text-center text-gray-400 text-sm border-t border-border">
-        © {new Date().getFullYear()} lstwin-空间营造师的创作伴侣————powered by nanobanana
-      </footer>
-    </div>
-  );
-}
+          </div>
+        </main>
+
+        {/* 图片预览模态框 */}
+        {previewImage && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm"
+            onClick={() => setPreviewImage(null)}
+          >
+            <div className="relative max-w-5xl max-h-[90vh] w-full flex flex-col items-center">
+              {/* 关闭按钮 */}
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
+              >
+                <X className="w-8 h-8" />
+              </button>
+              
+              {/* 图片 */}
+              <div className="relative w-full h-full flex items-center justify-center">
+                <img
+                  src={previewImage}
+                  alt="Preview"
+                  className="max-w-full max-h-[85vh] object-contain rounded-lg"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+              
+              {/* 下载按钮 */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const link = document.createElement('a');
+                  link.href = previewImage;
+                  link.download = 'generated-image.png';
+                  link.target = '_blank';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                className="mt-4 px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium flex items-center gap-2 transition-all border border-white/20"
+              >
+                <Download className="w-5 h-5" />
+                下载图片
+              </button>
+            </div>
+          </div>
+        )}
+
+        <footer className="py-8 border-t border-border">
+          <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                  <path d="M2 17l10 5 10-5" opacity="0.6" />
+                  <path d="M2 12l10 5 10-5" opacity="0.4" />
+                </svg>
+              </div>
+              <span>© {new Date().getFullYear()} lstwin · 空间营造师的创作伴侣</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="opacity-60">powered by nanobanana</span>
+              <span className="opacity-20">|</span>
+              <span className="opacity-70">联系我们：18217272223</span>
+            </div>
+          </div>
+
+          {/* 用户协议 & 隐私政策 */}
+          <div className="container mx-auto px-4 mt-3 flex items-center justify-center gap-3 text-xs text-muted-foreground">
+            <Link
+              href="/terms"
+              className="hover:text-foreground transition-colors leading-none"
+            >
+              用户协议
+            </Link>
+            <span className="opacity-40 leading-none">|</span>
+            <Link
+              href="/privacy"
+              className="hover:text-foreground transition-colors leading-none"
+            >
+              隐私政策
+            </Link>
+            <span className="opacity-40 leading-none">|</span>
+            <a
+              href="https://beian.miit.gov.cn"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors leading-none"
+            >
+              浙ICP备2026011642号
+            </a>
+            <span className="opacity-40 leading-none">|</span>
+            <a
+              href="https://beian.gov.cn/portal/registerSystemInfo?recordcode=33049802000578"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 hover:text-foreground transition-colors leading-none"
+            >
+              <img src="/beian-icon.png" alt="公安备案" width={14} height={14} style={{ display: 'block' }} />
+              浙公网安备33049802000578号
+            </a>
+          </div>
+        </footer>
+      </>
+    );
+  }

@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-// 改为从 lib 导入
-import { authOptions } from "@/lib/auth-options";
-// 而不是从 route.ts 导入
+import { auth } from "@/auth";
 import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
 
   if (!session?.user?.email) {
     return NextResponse.json({ error: '未登录' }, { status: 401 });

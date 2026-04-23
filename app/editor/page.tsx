@@ -27,8 +27,8 @@ interface DrawingAction {
   fontSize?: number;
 }
 
-// ============ Main Editor Component ============
-export default function NewEditor() {
+// ============ Suspense Wrapper for useSearchParams ============
+function EditorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const imageUrl = searchParams.get('image');
@@ -478,19 +478,66 @@ export default function NewEditor() {
       }
     }
 
-    const dataUrl = canvas.toDataURL('image/png');
-    if (!dataUrl || dataUrl.length < 100) {
-      alert('导出图片失败');
-      return;
+    // 获取原始尺寸
+    const originalWidth = canvas.width;
+    const originalHeight = canvas.height;
+    const maxDimension = 1024; // 限制在 1024px 内，确保 base64 不超出 sessionStorage 限制
+    
+    let targetCanvas = canvas;
+    
+    // 如果图片太大，创建一个缩小的版本
+    if (originalWidth > maxDimension || originalHeight > maxDimension) {
+      const scale = Math.min(maxDimension / originalWidth, maxDimension / originalHeight);
+      const newWidth = Math.round(originalWidth * scale);
+      const newHeight = Math.round(originalHeight * scale);
+      
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = newWidth;
+      tempCanvas.height = newHeight;
+      const tempCtx = tempCanvas.getContext('2d');
+      if (tempCtx) {
+        tempCtx.drawImage(canvas, 0, 0, newWidth, newHeight);
+        targetCanvas = tempCanvas;
+        console.log('handleUse: resized from', originalWidth, 'x', originalHeight, 'to', newWidth, 'x', newHeight);
+      }
     }
 
-    try {
-      sessionStorage.setItem('editedImage', dataUrl);
-      sessionStorage.setItem('editorReturn', 'true');
-      setTimeout(() => router.back(), 100);
-    } catch (err) {
-      alert('保存失败，请重试');
-    }
+    // 使用 JPEG 格式，质量 0.7，压缩率更高
+    targetCanvas.toBlob((blob) => {
+      if (!blob) {
+        alert('导出图片失败');
+        return;
+      }
+
+      const sizeKB = blob.size / 1024;
+      console.log('handleUse: blob size =', Math.round(sizeKB), 'KB');
+
+      // 直接读取 blob 为 base64
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        const base64SizeKB = (base64.length * 3) / 4 / 1024;
+        console.log('handleUse: base64 size =', Math.round(base64SizeKB), 'KB');
+
+        if (base64SizeKB > 4000) {
+          alert('图片太大，请尝试裁剪或缩小后再保存');
+          return;
+        }
+
+        try {
+          sessionStorage.setItem('editedImage', base64);
+          console.log('handleUse: saved to sessionStorage');
+          setTimeout(() => router.back(), 100);
+        } catch (err) {
+          console.error('handleUse: save failed', err);
+          alert('保存失败，图片太大，请裁剪后再试');
+        }
+      };
+      reader.onerror = () => {
+        alert('图片转换失败');
+      };
+      reader.readAsDataURL(blob);
+    }, 'image/jpeg', 0.7);
   };
 
   // ============ Zoom controls ============
@@ -704,10 +751,11 @@ export default function NewEditor() {
   );
 }
 
-// ============ Router Integration ============
-function useRouter() {
-  return {
-    back: () => window.history.back(),
-    push: (url: string) => window.location.href = url,
-  };
+// ============ Page Component with Suspense ============
+export default function NewEditor() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">加载编辑器...</div>}>
+      <EditorContent />
+    </Suspense>
+  );
 }

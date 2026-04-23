@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from "@/lib/auth-options";
+import { auth } from "@/auth";
 import { prisma } from '@/lib/prisma';
 import { alipaySdk } from '@/lib/alipay';
 import crypto from 'crypto';
@@ -16,7 +15,7 @@ const RECHARGE_PLANS = [
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: '请先登录' }, { status: 401 });
     }
@@ -29,14 +28,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '无效的方案' }, { status: 400 });
     }
 
-    const outTradeNo = `ALI_${crypto.randomBytes(8).toString('hex')}`;
+    // 环境变量校验
+    if (!process.env.ALIPAY_APP_ID || process.env.ALIPAY_APP_ID === 'your_alipay_app_id') {
+      console.error('支付宝配置缺失：ALIPAY_APP_ID 未设置');
+      return NextResponse.json({ error: '支付宝支付暂未配置，请使用其他支付方式' }, { status: 503 });
+    }
+
+    const outTradeNo = `ALI_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
     // 1. 创建订单记录 (状态为 pending)
     await prisma.transaction.create({
       data: {
         orderId: outTradeNo,
         userId: parseInt(userId),
-        amount: Math.round(plan.amount * 100),
+        amount: Math.round(plan.amount * 100), // 以分为单位存储
         credits: plan.credits || null,
         planId: planId,
         provider: 'alipay',
@@ -44,28 +50,36 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 2. 调用支付宝 SDK 生成支付表单/链接
-    const formData = new (require('alipay-sdk').default.FormData)();
-    formData.addField('notifyUrl', `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook/alipay`);
-    formData.addField('returnUrl', `${process.env.NEXT_PUBLIC_SITE_URL}/recharge/success?orderId=${outTradeNo}`);
-    formData.addField('bizContent', {
-      outTradeNo,
-      productCode: 'FAST_INSTANT_TRADE_PAY',
-      totalAmount: plan.amount.toFixed(2),
-      subject: plan.type ? `购买 ${plan.type} 会员` : `充值 ${plan.credits} 积分`,
+    // 2. 调用支付宝订单码支付（alipay.trade.precreate）生成二维码
+    const result = await alipaySdk.exec('alipay.trade.precreate', {
+      notifyUrl: `${siteUrl}/api/webhook/alipay`,
+      bizContent: {
+        outTradeNo,
+        totalAmount: plan.amount.toFixed(2), // 支付宝以元为单位
+        subject: plan.type ? `购买 ${plan.type} 会员 - lstwin` : `充值 ${plan.credits} 积分 - lstwin`,
+        body: plan.type ? `${plan.type}月会员` : `积分充值 ${plan.credits}`,
+        // 超时关闭时间：30分钟
+        timeoutExpress: '30m',
+      },
     });
 
-    // exec 返回的是一个 form 字符串，前端可以直接提交，或者生成一个链接
-    const result = await alipaySdk.pageExec('alipay.trade.page.pay', { formData });
+    if (result.code !== '10000') {
+      console.error('支付宝预创建失败:', result.subCode, result.subMsg);
+      return NextResponse.json(
+        { error: result.subMsg || '创建支付二维码失败' },
+        { status: 500 }
+      );
+    }
 
-    return NextResponse.json({ 
-      success: true, 
-      url: result 
+    return NextResponse.json({
+      success: true,
+      qrCode: result.qrCode, // 二维码链接，前端用 qrcode.react 渲染
+      orderId: outTradeNo,
     });
   } catch (error: any) {
-    console.error('Alipay checkout error:', error);
+    console.error('Alipay precreate error:', error);
     return NextResponse.json(
-      { error: error.message || '操作失败' },
+      { error: error.message || '创建支付订单失败' },
       { status: 500 }
     );
   }

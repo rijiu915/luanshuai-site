@@ -6,15 +6,84 @@ import { Suspense, useEffect, useState } from 'react';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
+  const orderId = searchParams.get('orderId');
   const sessionId = searchParams.get('session_id');
-  const [loading, setLoading] = useState(!!sessionId);
-  const [credits, setCredits] = useState<string | null>(searchParams.get('credits'));
+  const [loading, setLoading] = useState(true);
+  const [orderInfo, setOrderInfo] = useState<{ credits?: number; amount?: number; planId?: string; status: string } | null>(null);
 
   useEffect(() => {
     if (sessionId) {
+      // Stripe 回调：直接显示
+      const credits = searchParams.get('credits');
+      if (credits) {
+        setOrderInfo({ credits: parseInt(credits), status: 'completed' });
+      }
+      setLoading(false);
+    } else if (orderId) {
+      // 支付宝/微信回调：根据 orderId 查询订单信息
+      fetch(`/api/task/order-status?orderId=${orderId}`)
+        .then(res => res.json())
+        .then(async (data) => {
+          if (data.status === 'completed') {
+            // 从后端获取订单详情
+            try {
+              const detailRes = await fetch(`/api/order/detail?orderId=${orderId}`);
+              if (detailRes.ok) {
+                const detail = await detailRes.json();
+                setOrderInfo({
+                  credits: detail.credits,
+                  amount: detail.amount,
+                  planId: detail.planId,
+                  status: 'completed',
+                });
+              }
+            } catch {
+              // 查询详情失败，仍显示成功
+              setOrderInfo({ status: 'completed' });
+            }
+          } else {
+            // 支付宝同步回调可能在异步通知之前到达，轮询等待
+            let attempts = 0;
+            const maxAttempts = 10;
+            const pollInterval = setInterval(async () => {
+              attempts++;
+              try {
+                const pollRes = await fetch(`/api/task/order-status?orderId=${orderId}`);
+                const pollData = await pollRes.json();
+                if (pollData.status === 'completed') {
+                  clearInterval(pollInterval);
+                  try {
+                    const detailRes = await fetch(`/api/order/detail?orderId=${orderId}`);
+                    if (detailRes.ok) {
+                      const detail = await detailRes.json();
+                      setOrderInfo({
+                        credits: detail.credits,
+                        amount: detail.amount,
+                        planId: detail.planId,
+                        status: 'completed',
+                      });
+                    }
+                  } catch {
+                    setOrderInfo({ status: 'completed' });
+                  }
+                } else if (attempts >= maxAttempts) {
+                  clearInterval(pollInterval);
+                  setOrderInfo({ status: 'pending' });
+                }
+              } catch {
+                clearInterval(pollInterval);
+              }
+            }, 2000);
+          }
+          setLoading(false);
+        })
+        .catch(() => {
+          setLoading(false);
+        });
+    } else {
       setLoading(false);
     }
-  }, [sessionId]);
+  }, [orderId, sessionId]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
@@ -25,7 +94,7 @@ function SuccessContent() {
               <div className="animate-spin w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto mb-4"></div>
               <p className="text-gray-500">正在确认支付...</p>
             </div>
-          ) : (
+          ) : orderInfo?.status === 'completed' ? (
             <>
               <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
                 <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,11 +108,11 @@ function SuccessContent() {
               
               <p className="text-gray-500 dark:text-gray-400 mb-8">您的积分已到账</p>
               
-              {credits && (
+              {orderInfo.credits && (
                 <div className="bg-gray-50 dark:bg-gray-700/50 rounded-2xl p-6 mb-8 space-y-4 border border-border">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-500 dark:text-gray-400">获得积分</span>
-                    <span className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">+{credits}</span>
+                    <span className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">+{orderInfo.credits}</span>
                   </div>
                 </div>
               )}
@@ -63,6 +132,25 @@ function SuccessContent() {
                 </Link>
               </div>
             </>
+          ) : (
+            <>
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                <svg className="w-10 h-10 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h1 className="text-2xl font-bold mb-2 text-yellow-600">支付确认中</h1>
+              <p className="text-gray-500 dark:text-gray-400 mb-6">支付结果正在处理中，积分将在确认后到账</p>
+              <p className="text-xs text-gray-400 mb-8">订单号：{orderId}</p>
+              <div className="space-y-3">
+                <Link
+                  href="/"
+                  className="block w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium transition-all"
+                >
+                  返回首页
+                </Link>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -74,7 +162,7 @@ export default function SuccessPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full"></div>
+        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
       </div>
     }>
       <SuccessContent />

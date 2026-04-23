@@ -52,12 +52,14 @@ export async function GET(
 
     const data = await res.json();
     
-    // If NanoBanana API says it failed, and our local task is still pending, trigger refund
+    // 根据 NanoBanana API 文档判断任务状态
+    // successFlag: 0=生成中, 1=成功, 2=创建失败, 3=生成失败
     const apiCode = data.code;
-    const apiStatus = data.data?.status; // Some versions use data.status
+    const successFlag = data.data?.successFlag;
+    const resultImageUrl = data.data?.response?.resultImageUrl;
     
     const isFailed = (apiCode !== 200 && apiCode !== 0 && apiCode !== undefined) || 
-                     (apiStatus === 'failed' || apiStatus === 'error');
+                     (successFlag === 2 || successFlag === 3);
 
     if (isFailed && localTask && localTask.status === 'pending') {
       console.log(`Polling detected failure for task ${taskId}, triggering refund...`);
@@ -80,18 +82,12 @@ export async function GET(
           data: { status: 'failed' }
         })
       ]);
-    } else if ((apiCode === 200 || apiCode === 0) && localTask && localTask.status === 'pending') {
-      // If NanoBanana API says it's done (and we have resultImageUrl), mark as success
-      // Note: We only mark as success if it's actually finished. 
-      // Most APIs return 200 even when pending, but status field varies.
-      // Based on typical behavior, if data.data.info.resultImageUrl exists, it's done.
-      const resultImageUrl = data.data?.info?.resultImageUrl || data.data?.resultImageUrl;
-      if (resultImageUrl) {
-        await prisma.generationTask.update({
-          where: { id: localTask.id },
-          data: { status: 'success' }
-        });
-      }
+    } else if (successFlag === 1 && resultImageUrl && localTask && localTask.status === 'pending') {
+      // 任务成功完成
+      await prisma.generationTask.update({
+        where: { id: localTask.id },
+        data: { status: 'success' }
+      });
     }
 
     return Response.json(data, { status: res.status });

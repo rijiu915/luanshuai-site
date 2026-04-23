@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Navbar } from '@/components/navbar';
+import { QRCodeSVG } from 'qrcode.react';
 
 const VIP_PLANS = [
   { 
@@ -34,6 +35,9 @@ function VIPContent() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [userInfo, setUserInfo] = useState<any>(null);
+    const [showQrModal, setShowQrModal] = useState(false);
+    const [qrCodeUrl, setQrCodeUrl] = useState('');
+    const [currentOrderId, setCurrentOrderId] = useState('');
 
     useEffect(() => {
       if (session?.user) {
@@ -45,6 +49,26 @@ function VIPContent() {
           .catch(console.error);
       }
     }, [session]);
+
+  // 轮询订单状态
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showQrModal && currentOrderId) {
+      timer = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/task/order-status?orderId=${currentOrderId}`);
+          const data = await res.json();
+          if (data.status === 'completed') {
+            setShowQrModal(false);
+            router.push(`/profile`);
+          }
+        } catch (err) {
+          console.error('Check order status failed:', err);
+        }
+      }, 3000);
+    }
+    return () => clearInterval(timer);
+  }, [showQrModal, currentOrderId, router]);
 
     const handleCheckout = async () => {
       if (!selectedPlan) {
@@ -74,11 +98,18 @@ function VIPContent() {
           throw new Error(data.error || '开通失败');
         }
 
-        if (data.success) {
-          // Redirect to success or profile
-          router.push('/profile');
-        } else if (data.url) {
-          window.location.href = data.url;
+        if (paymentMethod === 'alipay' && data.qrCode) {
+          // 支付宝：显示二维码弹窗
+          setQrCodeUrl(data.qrCode);
+          setCurrentOrderId(data.orderId);
+          setShowQrModal(true);
+          setLoading(false);
+        } else if (paymentMethod === 'wechat' && data.qrCode) {
+          // 微信：显示二维码弹窗
+          setQrCodeUrl(data.qrCode);
+          setCurrentOrderId(data.orderId);
+          setShowQrModal(true);
+          setLoading(false);
         } else {
           throw new Error('支付请求异常');
         }
@@ -248,6 +279,41 @@ function VIPContent() {
             </div>
         </div>
       </main>
+
+      {/* 支付二维码弹窗 */}
+      {showQrModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-300">
+            <div className="text-center">
+              <h3 className="text-xl font-bold mb-2">
+                {paymentMethod === 'alipay' ? '支付宝扫码支付' : '微信扫码支付'}
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
+                请使用{paymentMethod === 'alipay' ? '支付宝' : '微信'}扫描下方二维码完成支付
+              </p>
+              
+              <div className="bg-white p-4 rounded-2xl inline-block shadow-inner mb-6">
+                <QRCodeSVG value={qrCodeUrl} size={200} />
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className={`flex items-center justify-center gap-2 text-sm animate-pulse ${
+                  paymentMethod === 'alipay' ? 'text-blue-500' : 'text-green-500'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${paymentMethod === 'alipay' ? 'bg-blue-500' : 'bg-green-500'}`}></div>
+                  等待支付中...
+                </div>
+                <button
+                  onClick={() => setShowQrModal(false)}
+                  className="w-full py-3 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
+                >
+                  取消支付
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
