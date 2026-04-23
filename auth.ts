@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs"
 import { rateLimit, resetRateLimit } from "@/lib/rate-limit"
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
+  trustHost: true,
   adapter: PrismaAdapter(prisma),
   providers: [
     Credentials({
