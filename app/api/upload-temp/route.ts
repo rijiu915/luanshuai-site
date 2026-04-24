@@ -5,15 +5,39 @@ import { NextRequest } from 'next/server';
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-// 初始化 S3 客户端（兼容 R2）
-const s3Client = new S3Client({
-  endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  region: 'auto',
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-});
+// 检查 R2 环境变量是否配置
+const R2_REQUIRED_ENV = [
+  'CLOUDFLARE_ACCOUNT_ID',
+  'R2_ACCESS_KEY_ID',
+  'R2_SECRET_ACCESS_KEY',
+  'R2_BUCKET_NAME',
+  'R2_PUBLIC_HOST',
+] as const;
+
+function checkR2Env() {
+  const missing = R2_REQUIRED_ENV.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    throw new Error(`Missing R2 environment variables: ${missing.join(', ')}. Please check your .env or server environment.`);
+  }
+}
+
+// 初始化 S3 客户端（兼容 R2）—— 延迟初始化，首次调用时检查环境变量
+let s3Client: S3Client | null = null;
+
+function getS3Client(): S3Client {
+  if (!s3Client) {
+    checkR2Env();
+    s3Client = new S3Client({
+      endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      region: 'auto',
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+      },
+    });
+  }
+  return s3Client;
+}
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -44,7 +68,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // 上传到 R2
-    await s3Client.send(
+    await getS3Client().send(
       new PutObjectCommand({
         Bucket: process.env.R2_BUCKET_NAME!,
         Key: key,

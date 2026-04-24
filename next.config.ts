@@ -8,6 +8,11 @@ const nextConfig = {
     // 暂时禁用构建时的类型检查
     ignoreBuildErrors: true,
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '20mb',
+    },
+  },
   images: {
     remotePatterns: [
       {
