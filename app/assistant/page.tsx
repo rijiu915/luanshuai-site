@@ -7,10 +7,11 @@ import Link from 'next/link';
 import { Download } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 
-// ===== 模型选项：仅两个 =====
+// ===== 模型选项 =====
 const MODEL_OPTIONS = [
   { value: 'nano-banana', label: 'Nano Banana（标准版）' },
   { value: 'nano-banana-pro', label: 'Nano Banana Pro（专业高清版）' },
+  { value: 'gpt-image-2', label: 'GPT Image 2（OpenAI）' },
 ];
 
 // 新增支持的分辨率选项
@@ -51,7 +52,7 @@ export default function AssistantPage() {
       .catch(console.error);
   }, []);
 
-  const currentPoints = selectedModel === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60);
+  const currentPoints = selectedModel === 'gpt-image-2' ? 30 : (selectedModel === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60));
 
   // === 1. 上传草图到 R2 ===
   const uploadSketchToR2 = async (file: File) => {
@@ -204,6 +205,38 @@ export default function AssistantPage() {
 
     setEffectStatus('submitting');
     try {
+      // gpt-image-2 使用独立同步 API
+      if (selectedModel === 'gpt-image-2') {
+        const requestBody: Record<string, any> = {
+          prompt: '高清渲染，建筑效果图，逼真材质与光影',
+          type: 'IMAGETOIAMGE',
+          aspectRatio: aspectRatio,
+          model: selectedModel,
+          imageUrls: [sketchR2Url],
+        };
+
+        const res = await fetch('/api/generate-openai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error('OpenAI effect failed:', text);
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (data.code === 200 && data.data?.response?.resultImageUrl) {
+          setEffectImageUrl(data.data.response.resultImageUrl);
+          setEffectStatus('success');
+        } else {
+          throw new Error(data.msg || '未返回图片');
+        }
+        return;
+      }
+
       // ✅ 统一使用 aspectRatio 字段（由 /api/generate 内部处理字段映射）
       const requestBody: Record<string, any> = {
         imageUrl: sketchR2Url,
@@ -251,6 +284,38 @@ export default function AssistantPage() {
 
     setAnalysisStatus('submitting');
     try {
+      // gpt-image-2 使用独立同步 API
+      if (selectedModel === 'gpt-image-2') {
+        const requestBody: Record<string, any> = {
+          prompt: '分析此图像的设计结构、材质、光影和空间布局，生成一张带标注的分析图',
+          type: 'IMAGETOIAMGE',
+          aspectRatio: aspectRatio,
+          model: selectedModel,
+          imageUrls: [effectImageUrl],
+        };
+
+        const res = await fetch('/api/generate-openai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error('OpenAI analysis failed:', text);
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (data.code === 200 && data.data?.response?.resultImageUrl) {
+          setAnalysisImageUrl(data.data.response.resultImageUrl);
+          setAnalysisStatus('success');
+        } else {
+          throw new Error(data.msg || '未返回图片');
+        }
+        return;
+      }
+
       // ✅ 统一使用 aspectRatio 字段
       const requestBody: Record<string, any> = {
         imageUrl: effectImageUrl,
@@ -340,36 +405,39 @@ export default function AssistantPage() {
             <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">上传中...</p>
           )}
 
-            {/* 模型选择开关 */}
-            <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-900/10 dark:to-purple-900/10 border border-blue-100 dark:border-blue-900/30">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-bold transition-colors ${selectedModel === 'nano-banana-pro' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                      {selectedModel === 'nano-banana-pro' ? 'Pro 专业模式' : '标准模式'}
-                    </span>
-                    {selectedModel === 'nano-banana-pro' && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white font-black uppercase tracking-wider">
-                        PRO
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {selectedModel === 'nano-banana-pro' ? '已开启高精度渲染与细节增强' : '开启以获得更高分辨率与写实细节'}
-                  </p>
-                </div>
+            {/* 模型选择 */}
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">模型</label>
+              <div className="flex gap-2">
                 <button
-                  type="button"
-                  onClick={() => setSelectedModel(selectedModel === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 focus:outline-none shadow-inner ${
-                    selectedModel === 'nano-banana-pro' ? 'bg-blue-600 shadow-blue-900/20' : 'bg-gray-300 dark:bg-gray-600'
+                  onClick={() => setSelectedModel('nano-banana')}
+                  className={`flex-1 py-2 rounded-lg border transition-all text-sm font-medium ${
+                    selectedModel === 'nano-banana'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-input-bg border-border text-foreground hover:border-blue-500/50'
                   }`}
                 >
-                  <span
-                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-out ${
-                      selectedModel === 'nano-banana-pro' ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
+                  标准版
+                </button>
+                <button
+                  onClick={() => setSelectedModel('nano-banana-pro')}
+                  className={`flex-1 py-2 rounded-lg border transition-all text-sm font-medium ${
+                    selectedModel === 'nano-banana-pro'
+                      ? 'bg-purple-600 text-white border-purple-600'
+                      : 'bg-input-bg border-border text-foreground hover:border-purple-500/50'
+                  }`}
+                >
+                  Pro
+                </button>
+                <button
+                  onClick={() => setSelectedModel('gpt-image-2')}
+                  className={`flex-1 py-2 rounded-lg border transition-all text-sm font-medium ${
+                    selectedModel === 'gpt-image-2'
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-input-bg border-border text-foreground hover:border-emerald-500/50'
+                  }`}
+                >
+                  GPT Image
                 </button>
               </div>
             </div>

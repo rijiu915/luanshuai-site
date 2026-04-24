@@ -109,7 +109,7 @@ const [showDropdown, setShowDropdown] = useState(false);
     const [resolution, setResolution] = useState<'1K' | '2K' | '4K'>('2K');
     const [uploadedFiles, setUploadedFiles] = useState<{ file: File; previewUrl: string }[]>([]);
     const [isZoomed, setIsZoomed] = useState(false);
-    const [model, setModel] = useState<'nano-banana' | 'nano-banana-pro'>('nano-banana');
+    const [model, setModel] = useState<'nano-banana' | 'nano-banana-pro' | 'gpt-image-2'>('nano-banana');
 
     // 清理预览 URL
     useEffect(() => {
@@ -386,6 +386,38 @@ const [showDropdown, setShowDropdown] = useState(false);
           resolution: body.resolution,
           hasImages: imageUrls.length,
         });
+
+        // gpt-image-2 使用独立的同步 API
+        if (model === 'gpt-image-2') {
+          const res = await fetch('/api/generate-openai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error('OpenAI API HTTP error:', res.status, errorText);
+            throw new Error(`服务器错误 (${res.status}): ${errorText || '未知错误'}`);
+          }
+
+          const data = await res.json();
+
+          if (data.code !== 200) {
+            console.error('OpenAI API error:', data);
+            throw new Error(data.msg || '生成失败');
+          }
+
+          // 同步返回，直接拿到图片 URL
+          const resultImageUrl = data.data?.response?.resultImageUrl;
+          if (resultImageUrl) {
+            setPageStatus('idle');
+            setGeneratedImages([{ url: resultImageUrl }]);
+          } else {
+            throw new Error('未返回图片');
+          }
+          return;
+        }
 
         const res = await fetch('/api/generate', {
           method: 'POST',
@@ -712,44 +744,50 @@ const [showDropdown, setShowDropdown] = useState(false);
 
               {/* 模型选择 */}
               <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <label className="block text-sm font-medium text-foreground">
-                    生成模型
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-sm font-medium transition-colors ${
-                      model === 'nano-banana' ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'
-                    }`}>
-                      标准版
-                    </span>
-                    <button
-                      onClick={() => setModel(model === 'nano-banana' ? 'nano-banana-pro' : 'nano-banana')}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${
-                        model === 'nano-banana-pro' ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-out ${
-                          model === 'nano-banana-pro' ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                    <span className={`text-sm font-medium transition-colors ${
-                      model === 'nano-banana-pro' ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'
-                    }`}>
-                      Pro 专业版
-                    </span>
-                    {model === 'nano-banana-pro' && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white font-bold uppercase">
-                        PRO
-                      </span>
-                    )}
-                  </div>
+                <label className="block text-sm font-medium text-foreground mb-3">
+                  生成模型
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setModel('nano-banana')}
+                    className={`flex-1 py-2.5 rounded-xl border transition-all text-sm font-medium ${
+                      model === 'nano-banana'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-blue-500/25'
+                        : 'bg-input-bg border-border text-foreground hover:border-blue-500/50'
+                    }`}
+                  >
+                    标准版
+                    <span className="block text-[10px] opacity-70 mt-0.5">15 积分/张</span>
+                  </button>
+                  <button
+                    onClick={() => setModel('nano-banana-pro')}
+                    className={`flex-1 py-2.5 rounded-xl border transition-all text-sm font-medium ${
+                      model === 'nano-banana-pro'
+                        ? 'bg-purple-600 text-white border-purple-600 shadow-purple-500/25'
+                        : 'bg-input-bg border-border text-foreground hover:border-purple-500/50'
+                    }`}
+                  >
+                    Pro 专业版
+                    <span className="block text-[10px] opacity-70 mt-0.5">60-90 积分/张</span>
+                  </button>
+                  <button
+                    onClick={() => setModel('gpt-image-2')}
+                    className={`flex-1 py-2.5 rounded-xl border transition-all text-sm font-medium ${
+                      model === 'gpt-image-2'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-emerald-500/25'
+                        : 'bg-input-bg border-border text-foreground hover:border-emerald-500/50'
+                    }`}
+                  >
+                    GPT Image
+                    <span className="block text-[10px] opacity-70 mt-0.5">30 积分/张</span>
+                  </button>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground mt-2">
                   {model === 'nano-banana' 
                     ? '标准版：15 积分/张，适合快速预览' 
-                    : 'Pro 专业版：60-90 积分/张，支持 2K/4K 超清输出'}
+                    : model === 'nano-banana-pro'
+                    ? 'Pro 专业版：60-90 积分/张，支持 2K/4K 超清输出'
+                    : 'GPT Image 2：30 积分/张，OpenAI 最新图像生成模型'}
                 </p>
               </div>
 

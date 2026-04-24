@@ -17,7 +17,7 @@ export default function PlusPage() {
 
   // 状态
   const [uploadedFile, setUploadedFile] = useState<{ file: File; previewUrl: string } | null>(null);
-  const [model, setModel] = useState<'nano-banana' | 'nano-banana-pro'>('nano-banana');
+  const [model, setModel] = useState<'nano-banana' | 'nano-banana-pro' | 'gpt-image-2'>('nano-banana');
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [resolution, setResolution] = useState<'1K' | '2K' | '4K'>('2K');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'polling'>('idle');
@@ -142,6 +142,35 @@ export default function PlusPage() {
 
       if (model === 'nano-banana-pro') {
         body.resolution = resolution;
+      }
+
+      // gpt-image-2 使用独立同步 API
+      if (model === 'gpt-image-2') {
+        const res = await fetch('/api/generate-openai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`服务器错误 (${res.status}): ${errorText}`);
+        }
+
+        const data = await res.json();
+
+        if (data.code !== 200) {
+          throw new Error(data.msg || '生成失败');
+        }
+
+        const resultImageUrl = data.data?.response?.resultImageUrl;
+        if (resultImageUrl) {
+          setStatus('idle');
+          setGeneratedImage(resultImageUrl);
+        } else {
+          throw new Error('未返回图片');
+        }
+        return;
       }
 
       const res = await fetch('/api/generate', {
@@ -304,6 +333,17 @@ export default function PlusPage() {
                   >
                     Pro 专业版
                     <span className="block text-xs opacity-70 mt-0.5">60-90 积分/张</span>
+                  </button>
+                  <button
+                    onClick={() => setModel('gpt-image-2')}
+                    className={`flex-1 py-3 rounded-xl border transition-all font-medium ${
+                      model === 'gpt-image-2'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-emerald-500/25'
+                        : 'bg-input-bg border-border text-foreground hover:border-emerald-500/50'
+                    }`}
+                  >
+                    GPT Image
+                    <span className="block text-xs opacity-70 mt-0.5">30 积分/张</span>
                   </button>
                 </div>
               </div>
