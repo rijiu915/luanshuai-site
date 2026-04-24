@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 
 // 积分配置
-const OPENAI_POINTS = 30; // gpt-image-2 每张消耗积分
+const OPENAI_POINTS = 80; // gpt-image-2 每张消耗积分
 
 // 宽高比 → OpenAI size 映射
 const RATIO_TO_SIZE: Record<string, string> = {

@@ -343,7 +343,7 @@ export default function PlusPage() {
                     }`}
                   >
                     GPT Image
-                    <span className="block text-xs opacity-70 mt-0.5">30 积分/张</span>
+                    <span className="block text-xs opacity-70 mt-0.5">80 积分/张</span>
                   </button>
                 </div>
               </div>

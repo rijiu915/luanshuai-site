@@ -52,7 +52,7 @@ export default function AssistantPage() {
       .catch(console.error);
   }, []);
 
-  const currentPoints = selectedModel === 'gpt-image-2' ? 30 : (selectedModel === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60));
+  const currentPoints = selectedModel === 'gpt-image-2' ? 80 : (selectedModel === 'nano-banana' ? 15 : (resolution === '4K' ? 90 : 60));
 
   // === 1. 上传草图到 R2 ===
   const uploadSketchToR2 = async (file: File) => {

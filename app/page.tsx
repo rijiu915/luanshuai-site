@@ -779,7 +779,7 @@ const [showDropdown, setShowDropdown] = useState(false);
                     }`}
                   >
                     GPT Image
-                    <span className="block text-[10px] opacity-70 mt-0.5">30 积分/张</span>
+                    <span className="block text-[10px] opacity-70 mt-0.5">80 积分/张</span>
                   </button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
@@ -787,7 +787,7 @@ const [showDropdown, setShowDropdown] = useState(false);
                     ? '标准版：15 积分/张，适合快速预览' 
                     : model === 'nano-banana-pro'
                     ? 'Pro 专业版：60-90 积分/张，支持 2K/4K 超清输出'
-                    : 'GPT Image 2：30 积分/张，OpenAI 最新图像生成模型'}
+                    : 'GPT Image 2：80 积分/张，OpenAI 最新图像生成模型'}
                 </p>
               </div>
 
